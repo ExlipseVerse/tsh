@@ -3,7 +3,8 @@ mod builtin;
 #[allow(unused_imports)]
 use std::io::{self, Write, Read};
 use std::env;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
+
 use builtin::BuiltIn;
 
 fn fetchPath() -> Option<Vec<PathBuf>> {
@@ -13,6 +14,10 @@ fn fetchPath() -> Option<Vec<PathBuf>> {
         None
     }
 }
+
+// fn is_executable(path: &Path) -> bool {
+//     path.is_file() && path.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
+// }
 
 fn main() {
     // TODO: Uncomment the code below to pass the first stage
@@ -44,20 +49,12 @@ fn main() {
                         if BuiltIn::from_str(sec_cmd).is_some() {
                             println!("{} is a shell builtin", sec_cmd);
                         } else {
-                            let mut success = false;
-                            if let Some(path) = fetchPath() {
-                                for dir in path {
-                                    let cmd_path = dir.join(sec_cmd.trim().to_lowercase());
-                                    if cmd_path.exists() {
-                                        println!("{} is {}", sec_cmd, cmd_path.display());
-                                        success = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if !success {
+                            if let Ok(path) = which::which(sec_cmd) {
+                                println!("{} is {}", sec_cmd, path.display());
+                            } else {
                                 println!("{} not found", sec_cmd);
                             }
+                           
                         }
                     } else {
                         println!("missing argument");
