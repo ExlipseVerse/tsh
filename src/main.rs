@@ -14,6 +14,14 @@ fn main() {
             break;
         }
 
-        println!("{}: command not found", input.trim());
+        let command: Vec<&str> = input.split_whitespace().collect();
+        if command.first().is_none() {
+            continue;
+        } else if command[0] == "echo" {
+            println!("{}", command[1..].join(" "));
+        } else {
+            println!("{}: command not found", input.trim());
+        }
+        
     }
 }
