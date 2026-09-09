@@ -37,7 +37,7 @@ fn main() {
         let command: Vec<&str> = input.split_whitespace().collect();
 
         if let Some(cmd_name) = command.first() {
-            match BuiltIn::from_str(cmd_name) {
+            match BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
                 Some(BuiltIn::Echo) => {
                     if command.len() < 2 {
                         println!("missing argument");
@@ -61,6 +61,15 @@ fn main() {
                         println!("missing argument");
                     }
                 }
+
+                Some(BuiltIn::Pwd) => {
+                    if let Ok(curr_dir) = env::current_dir() {
+                        println!("{}", curr_dir.display());
+                    } else {
+                        println!("Failed to get current directory");
+                    }
+                }
+
                 Some(BuiltIn::Exit) => {
                     break;
                 }
