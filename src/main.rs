@@ -8,13 +8,13 @@ use std::process::Command;
 
 use builtin::BuiltIn;
 
-fn fetchPath() -> Option<Vec<PathBuf>> {
-    if let Some(path_var) = env::var_os("PATH") {
-        Some(env::split_paths(&path_var).collect())
-    } else {
-        None
-    }
-}
+// fn fetchPath() -> Option<Vec<PathBuf>> {
+//     if let Some(path_var) = env::var_os("PATH") {
+//         Some(env::split_paths(&path_var).collect())
+//     } else {
+//         None
+//     }
+// }
 
 // fn is_executable(path: &Path) -> bool {
 //     path.is_file() && path.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
@@ -69,7 +69,7 @@ fn main() {
                         let mut proc = Command::new(path)
                             .args(&command[1..])
                             .spawn()
-                            .expect("Failed to execute command");
+                        child.wait()?;
 
                     } else {
                         println!("{}: command not found", cmd_name);
