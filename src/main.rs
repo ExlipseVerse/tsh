@@ -1,7 +1,7 @@
 mod builtin;
 
 #[allow(unused_imports)]
-use std::io::{self, Write, Read};
+use std::io::{self, Write, Read, ErrorKind};
 use std::os::unix::process::CommandExt;
 use std::env;
 use std::path::{PathBuf, Path};
@@ -77,7 +77,11 @@ fn main() {
 
                     if let Some(dir) = command.get(1) {
                         if let Err(e) = env::set_current_dir(dir) {
-                            println!("cd: {}: {}", dir, e);
+                            if e.kind() == ErrorKind::NotFound {
+                                println!("cd: {}: No such file or directory", dir);
+                            } else {
+                                println!("cd: {}: {}", dir, e);
+                            }
                         }
                     } else {
                         println!("missing argument");
