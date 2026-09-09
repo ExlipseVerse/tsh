@@ -2,6 +2,7 @@ mod builtin;
 
 #[allow(unused_imports)]
 use std::io::{self, Write, Read};
+use std::os::unix::process::CommandExt;
 use std::env;
 use std::path::{PathBuf, Path};
 use std::process::Command;
@@ -66,7 +67,9 @@ fn main() {
 
                 None => {
                     if let Ok(path) = which::which(cmd_name) {
+                        
                         let mut proc = Command::new(path)
+                            .arg0(cmd_name)
                             .args(&command[1..])
                             .spawn();
                         match proc {
