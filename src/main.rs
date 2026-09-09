@@ -68,8 +68,16 @@ fn main() {
                     if let Ok(path) = which::which(cmd_name) {
                         let mut proc = Command::new(path)
                             .args(&command[1..])
-                            .spawn()
-                        child.wait()?;
+                            .spawn();
+                        match proc {
+                            Ok(mut child) => {
+                                let _ = child.wait();
+                            }
+
+                            Err(e) => {
+                                println!("Failed to execute {}: {}", cmd_name, e);
+                            }
+                        }
 
                     } else {
                         println!("{}: command not found", cmd_name);
