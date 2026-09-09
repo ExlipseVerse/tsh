@@ -76,11 +76,29 @@ fn main() {
                     // }
 
                     if let Some(dir) = command.get(1) {
-                        if let Err(e) = env::set_current_dir(dir) {
-                            if e.kind() == ErrorKind::NotFound {
-                                println!("cd: {}: No such file or directory", dir);
-                            } else {
-                                println!("cd: {}: {}", dir, e);
+                        match dir {
+                            &"~" => {
+                                if let Some(home_dir) = env::home_dir() {
+                                    if let Err(e) = env::set_current_dir(&home_dir) {
+                                        if e.kind() == ErrorKind::NotFound {
+                                            println!("cd: {}: No such file or directory", dir);
+                                        } else {
+                                            println!("cd: {}: {}", dir, e);
+                                        }
+                                    }
+                                } else {
+                                    println!("cd: Home directory not found");
+                                }
+                            }
+
+                            _ => {
+                                if let Err(e) = env::set_current_dir(dir) {
+                                    if e.kind() == ErrorKind::NotFound {
+                                        println!("cd: {}: No such file or directory", dir);
+                                    } else {
+                                        println!("cd: {}: {}", dir, e);
+                                    }
+                                }
                             }
                         }
                     } else {
