@@ -21,6 +21,42 @@ use builtin::BuiltIn;
 //     path.is_file() && path.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
 // }
 
+fn parse_input(input: &str) -> Vec<String> {
+    let mut args = Vec::new(); // we create an array []
+    let mut current_arg = String::new(); // we create a string to store the current argument
+    let mut in_single_quotes = false; // we create a boolean to check if we are in single quotes
+    let mut has_content = false; // we create a boolean to check if we have content in the current argument
+
+    for c in input.chars() { // by for example
+        match c {
+            '\'' => {
+                in_single_quotes = !in_single_quotes;
+                has_content = true;
+            }
+
+            ' ' | '\t' | '\n' | '\r' if !in_single_quotes => {
+                if has_content || !current_arg.is_empty() {
+                    args.push(current_arg.clone());
+                    current_arg.clear();
+                    has_content = false;
+                }
+            }
+
+            _ => {
+                current_arg.push(c);
+                has_content = true;
+            }
+        }
+
+    }
+
+    if has_content || !current_arg.is_empty() {
+        args.push(current_arg);
+    }
+
+    args
+}
+
 fn main() {
     // TODO: Uncomment the code below to pass the first stage
     loop {
@@ -34,16 +70,12 @@ fn main() {
             break;
         }
 
-        let command: Vec<&str> = input.split_whitespace().collect();
+        let command: Vec<String> = parse_input(&input);
 
         if let Some(cmd_name) = command.first() {
             match BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
                 Some(BuiltIn::Echo) => {
-                    if command.len() < 2 {
-                        println!("missing argument");
-                    } else {
-                        println!("{}", command[1..].join(" "));
-                    }
+                    println!("{}", command[1..].join(" "));
                 }
                 Some(BuiltIn::Type) => {
                     if let Some(sec_cmd) = command.get(1) {
@@ -76,8 +108,8 @@ fn main() {
                     // }
 
                     if let Some(dir) = command.get(1) {
-                        match dir {
-                            &"~" => {
+                        match dir.as_str() {
+                            "~" => {
                                 if let Some(home_dir) = env::home_dir() {
                                     if let Err(e) = env::set_current_dir(&home_dir) {
                                         if e.kind() == ErrorKind::NotFound {
