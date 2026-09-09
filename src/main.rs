@@ -31,12 +31,28 @@ fn parse_input(input: &str) -> Vec<String> {
 
 
     for c in input.chars() { // by for example a, b, c
+
         if is_escaped {
-            current_arg.push(c);
+            if in_double_quotes {
+                match c {
+                    '"' | '\\' => {    
+                        current_arg.push(c);
+                    }
+
+                    _ => {
+                        current_arg.push('\\');
+                        current_arg.push(c);
+                    }
+                }
+            } else {
+                current_arg.push(c);
+            }
+            
             has_content = true;
             is_escaped = false;
             continue
         }
+        
         match c {
             '\\' => {
                 if in_single_quotes {
@@ -84,6 +100,9 @@ fn parse_input(input: &str) -> Vec<String> {
 
     }
 
+    if is_escaped {
+        current_arg.push('\\');
+    }
     if has_content || !current_arg.is_empty() {
         args.push(current_arg);
     }
