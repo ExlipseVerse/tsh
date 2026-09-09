@@ -4,6 +4,7 @@ mod builtin;
 use std::io::{self, Write, Read};
 use std::env;
 use std::path::{PathBuf, Path};
+use std::process::Command;
 
 use builtin::BuiltIn;
 
@@ -33,7 +34,6 @@ fn main() {
         }
 
         let command: Vec<&str> = input.split_whitespace().collect();
-        let parsed_cmd = command.first().and_then(|&cmd| BuiltIn::from_str(cmd));
 
         if let Some(cmd_name) = command.first() {
             match BuiltIn::from_str(cmd_name) {
@@ -65,7 +65,15 @@ fn main() {
                 }
 
                 None => {
-                    println!("{}: command not found", cmd_name);
+                    if let Ok(path) = which::which(cmd_name) {
+                        let mut proc = Command::new(path)
+                            .args(&command[1..])
+                            .spawn()
+                            .expect("Failed to execute command");
+
+                    } else {
+                        println!("{}: command not found", cmd_name);
+                    }
                 }
             }
         } else {
