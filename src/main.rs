@@ -70,6 +70,20 @@ fn main() {
                     }
                 }
 
+                Some(BuiltIn::Cd) => {
+                    // if command.len() < 1 {
+                        
+                    // }
+
+                    if let Some(dir) = command.get(1) {
+                        if let Err(e) = env::set_current_dir(dir) {
+                            println!("cd: {}: {}", dir, e);
+                        }
+                    } else {
+                        println!("missing argument");
+                    }
+                }
+
                 Some(BuiltIn::Exit) => {
                     break;
                 }
