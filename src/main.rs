@@ -80,7 +80,7 @@ fn parse_input(input: &str) -> Vec<String> {
                 }
             }
 
-            ' ' | '\t' | '\n' | '\r' if !in_single_quotes => {
+            ' ' | '\t' | '\n' | '\r' => {
                 if in_single_quotes || in_double_quotes {
                     current_arg.push(c);
                 } else {
