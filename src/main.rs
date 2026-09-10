@@ -196,7 +196,6 @@ fn main() {
                 }
 
                 None => {
-                    println!("{}", cmd_name);
                     if let Ok(path) = which::which(cmd_name) {
                         
                         let mut proc = Command::new(path)
