@@ -2,6 +2,7 @@ mod builtin;
 
 #[allow(unused_imports)]
 use std::io::{self, Write, Read, ErrorKind};
+use std::fs::{read_dir, write, metadata, File};
 use std::os::unix::process::CommandExt;
 use std::env;
 use std::path::{PathBuf, Path};
@@ -110,8 +111,29 @@ fn parse_input(input: &str) -> Vec<String> {
     args
 }
 
+fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<File>) {
+    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>") {
+        let (clean_slice, redirect_path) = args.split_at(pos);
+        let clean_args: Vec<&str> = clean_slice.iter().map(|s| s.as_str()).collect();
+
+
+        if let Some(file_name) = redirect_path.get(1) {
+            match File::create(file_name) {
+                Ok(file) => return (clean_args, Some(file)),
+                Err(e) => {
+                    println!("shell: failed to open redirect file: {}", e);
+                    return (clean_args, None);
+                }
+            }
+        } 
+
+        (clean_args, None)
+    } else {
+        (args.iter().map(|s| s.as_str()).collect(), None)
+    }
+}
+
 fn main() {
-    // TODO: Uncomment the code below to pass the first stage
     loop {
         print!("$ ");
 
@@ -126,9 +148,21 @@ fn main() {
         let command: Vec<String> = parse_input(&input);
 
         if let Some(cmd_name) = command.first() {
+
+            let cmd_args = command.get(1..).unwrap_or(&[]);
+
             match BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
                 Some(BuiltIn::Echo) => {
-                    println!("{}", command[1..].join(" "));
+                    let (args, file_o) = extract_redirection(cmd_args);
+                    let output = args.join(" ");
+
+                    if let Some(mut file) = file_o {
+                        if let Err(e) =  writeln!(file, "{}", output) {
+                            println!("shell: write error: {}", e);
+                        }
+                    } else {
+                        println!("{}", output);
+                    }
                 }
                 Some(BuiltIn::Type) => {
                     if let Some(sec_cmd) = command.get(1) {
@@ -148,8 +182,15 @@ fn main() {
                 }
 
                 Some(BuiltIn::Pwd) => {
+                    let (_, file_o) = extract_redirection(cmd_args);
                     if let Ok(curr_dir) = env::current_dir() {
-                        println!("{}", curr_dir.display());
+                        if let Some(mut file) = file_o {
+                            if let Err(e) = writeln!(file, "{}", curr_dir.display()) {
+                                println!("shell: write error: {}", e);
+                            }
+                        } else {
+                            println!("{}", curr_dir.display());
+                        }
                     } else {
                         println!("Failed to get current directory");
                     }
@@ -196,13 +237,21 @@ fn main() {
                 }
 
                 None => {
-                    if let Ok(path) = which::which(cmd_name) {
+                    if let Ok(path) = which::which(cmd_name) { // reads the path 
+                        // .args(&command[1..])
+                        //     .spawn();
+
+                        let mut proc = Command::new(path);
+                        proc.arg0(cmd_name);
+                           
+                        let (args, file_o) = extract_redirection(cmd_args);
+                        proc.args(&args);
+
+                        if let Some(file) = file_o {
+                            proc.stdout(file);
+                        }
                         
-                        let mut proc = Command::new(path)
-                            .arg0(cmd_name)
-                            .args(&command[1..])
-                            .spawn();
-                        match proc {
+                        match proc.spawn() {
                             Ok(mut child) => {
                                 let _ = child.wait();
                             }
