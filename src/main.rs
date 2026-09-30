@@ -1,4 +1,5 @@
 mod builtin;
+mod shellhelper;
 
 #[allow(unused_imports)]
 use std::io::{self, Write, Read, ErrorKind};
@@ -8,7 +9,12 @@ use std::env;
 use std::path::{PathBuf, Path};
 use std::process::Command;
 
+use rustyline::Editor;
+use rustyline::error::ReadlineError;
+use rustyline::Config;
+
 use builtin::BuiltIn;
+use shellhelper::ShellHelper;
 
 // fn fetchPath() -> Option<Vec<PathBuf>> {
 //     if let Some(path_var) = env::var_os("PATH") {
@@ -154,12 +160,44 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 }
 
 fn main() {
+    let config = Config::builder().build();
+    let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
+    rl.set_helper(Some(ShellHelper));
     loop {
-        print!("$ ");
 
-        let mut input = String::new();
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut input).unwrap();
+        // NEW READER
+
+        let input = match rl.readline("$ ") {
+            Ok(line) => {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let _ = rl.add_history_entry(line.as_str());
+                line
+            }
+
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                continue;
+            }
+
+            Err(ReadlineError::Eof) => {
+                println!("exit");
+                break;
+            }
+            Err(err) => {
+                println!("Error reading input: {:?}", err);
+                break;
+            }
+        }; 
+
+        //OLD READER
+
+        // print!("$ ");
+
+        // let mut input = String::new();
+        // io::stdout().flush().unwrap();
+        // io::stdin().read_line(&mut input).unwrap();
         
         if input.trim() == "exit" {
             break;
