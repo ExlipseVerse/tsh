@@ -162,7 +162,7 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 fn main() {
     let config = Config::builder().build();
     let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
-    rl.set_helper(Some(ShellHelper));
+    rl.set_helper(Some(ShellHelper::new()));
     loop {
 
         // NEW READER

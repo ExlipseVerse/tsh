@@ -2,6 +2,7 @@ use crate::builtin::BuiltIn;
 use std::env;
 use std::fs::{read_dir, metadata};
 use std::io::{self, Write};
+use std::sync::Mutex;
 use rustyline::completion::{Completer, Pair};
 use rustyline::Context;
 use rustyline::Result;
@@ -10,7 +11,9 @@ use rustyline::highlight::Highlighter;
 use rustyline::validate::Validator;
 use rustyline::Helper;
 
-pub struct ShellHelper;
+pub struct ShellHelper {
+	last_completion: Mutex<Option<(String, usize)>>,
+}
 
 
 impl Helper for ShellHelper {}
@@ -18,6 +21,14 @@ impl Highlighter for ShellHelper {}
 impl Validator for ShellHelper {}
 impl Hinter for ShellHelper {
 	type Hint = String;
+}
+
+impl ShellHelper {
+	pub fn new() -> Self {
+		Self {
+			last_completion: Mutex::new(None),
+		}
+	}
 }
 
 impl Completer for ShellHelper {
@@ -89,9 +100,39 @@ impl Completer for ShellHelper {
 				display: prefix.to_string(),
 				replacement: prefix.to_string(),
 			});
-			return Ok((0, candidates))
+			return Ok((0, candidates));
 		}
 
-		Ok((0, candidates))
+		if candidates.len() == 1 {
+			let mut last = self.last_completion.lock().unwrap();
+			*last = None;
+			return Ok((0, candidates));
+		}
+
+		let mut last = self.last_completion.lock().unwrap();
+		let curr_count = match &*last {
+			Some((prev_p, count)) if prev_p == prefix => count + 1,
+			_ => 1
+		};
+
+		*last = Some((prefix.to_string(), curr_count));
+
+
+		if curr_count == 1 {
+			print!("\x07");
+            let _ = io::stdout().flush();
+            return Ok((0, Vec::new()));
+		} else {
+			println!();
+
+			let names: Vec<String> = candidates.iter().map(|c| c.display.clone()).collect();
+			println!("{}", names.join(" "));
+
+			*last = None;
+
+			return Ok((0, Vec::new()));
+		}
+
+		// Ok((0, candidates))
 	}
 }
