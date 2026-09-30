@@ -103,36 +103,36 @@ impl Completer for ShellHelper {
 			return Ok((0, candidates));
 		}
 
-		if candidates.len() == 1 {
-			let mut last = self.last_completion.lock().unwrap();
-			*last = None;
-			return Ok((0, candidates));
-		}
+		// if candidates.len() == 1 {
+		// 	let mut last = self.last_completion.lock().unwrap();
+		// 	*last = None;
+		// 	return Ok((0, candidates));
+		// }
 
-		let mut last = self.last_completion.lock().unwrap();
-		let curr_count = match &*last {
-			Some((prev_p, count)) if prev_p == prefix => count + 1,
-			_ => 1
-		};
+		// let mut last = self.last_completion.lock().unwrap();
+		// let curr_count = match &*last {
+		// 	Some((prev_p, count)) if prev_p == prefix => count + 1,
+		// 	_ => 1
+		// };
 
-		*last = Some((prefix.to_string(), curr_count));
+		// *last = Some((prefix.to_string(), curr_count));
 
 
-		if curr_count == 1 {
-			print!("\x07");
-            let _ = io::stdout().flush();
-            return Ok((0, Vec::new()));
-		} else {
-			println!();
+		// if curr_count == 1 {
+		// 	print!("\x07");
+        //     let _ = io::stdout().flush();
+        //     return Ok((0, Vec::new()));
+		// } else {
+		// 	println!();
 
-			let names: Vec<String> = candidates.iter().map(|c| c.display.clone()).collect();
-			println!("{}", names.join(" "));
+		// 	let names: Vec<String> = candidates.iter().map(|c| c.display.clone()).collect();
+		// 	println!("{}", names.join(" "));
 
-			*last = None;
+		// 	*last = None;
 
-			return Ok((0, Vec::new()));
-		}
+		// 	return Ok((0, Vec::new()));
+		// }
 
-		// Ok((0, candidates))
+		Ok((0, candidates))
 	}
 }
