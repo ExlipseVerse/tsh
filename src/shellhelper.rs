@@ -3,13 +3,14 @@ use std::env;
 use std::fs::{read_dir, metadata};
 use std::io::{self, Write};
 use std::sync::Mutex;
-use rustyline::completion::{Completer, Pair, longest_common_prefix};
+use rustyline::completion::{Completer, Pair, FilenameCompleter, longest_common_prefix};
 use rustyline::Context;
 use rustyline::Result;
 use rustyline::hint::Hinter;
 use rustyline::highlight::Highlighter;
 use rustyline::validate::Validator;
 use rustyline::Helper;
+
 
 pub struct ShellHelper;
 
@@ -44,11 +45,18 @@ impl Completer for ShellHelper {
 			return Ok((0, candidates));
 		}
 
+		let prefix = &line[..pos];
+// !matches[0].replacement.ends_with(std::path::MAIN_SEPARATOR)
 		if line[..pos].contains(' ') {
-			return Ok((0, candidates));
+			let (start, mut matches) = FilenameCompleter::new().complete_path(line, pos)?;
+			if matches.len() == 1 {
+                matches[0].replacement.push(' ');
+            }
+
+            return Ok((start, matches));
 		}
 
-		let prefix = &line[..pos];
+		
 
 		let builtins = [
 			BuiltIn::Cd,
