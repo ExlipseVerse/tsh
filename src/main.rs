@@ -117,7 +117,7 @@ enum Redirection {
 }
 
 fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
-    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>" || arg == ">>" || arg == "1>>") {
+    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>" || arg == ">>" || arg == "1>>" || arg == "2>>") {
         let redirect_type = &args[pos];
         let (clean_slice, redirect_path) = args.split_at(pos);
         let clean_args: Vec<&str> = clean_slice.iter().map(|s| s.as_str()).collect();
@@ -134,7 +134,7 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 
             match file_result {
                 Ok(file) => {
-                    if redirect_type == "2>" || "2>>" {
+                    if redirect_type == "2>" || redirect_type == "2>>" {
                         return (clean_args, Some(Redirection::Stderr(file)));
                     } else {
                         return (clean_args, Some(Redirection::Stdout(file)));
