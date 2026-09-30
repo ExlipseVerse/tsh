@@ -48,10 +48,43 @@ impl Completer for ShellHelper {
 		let prefix = &line[..pos];
 // !matches[0].replacement.ends_with(std::path::MAIN_SEPARATOR)
 		if line[..pos].contains(' ') {
-			let (start, mut matches) = FilenameCompleter::new().complete_path(line, pos)?;
-			if matches.len() == 1 {
-                matches[0].replacement.push(' ');
-            }
+			let (start, n_matches) = FilenameCompleter::new().complete_path(line, pos)?;
+
+			let mut matches = Vec::new();
+			for candidate in n_matches {
+				let display = candidate.display.to_string();
+				let mut replacement = candidate.replacement.to_string();
+
+				if !replacement.ends_with(std::path::MAIN_SEPARATOR) {
+					replacement.push(' ');
+				}
+
+				matches.push(Pair {
+					display,
+					replacement
+				});
+			}
+
+			if !matches.is_empty() {
+				let paths: Vec<String> = matches.iter().map(|c| c.display.clone()).collect();
+				let lcp = longest_common_prefix(&paths);
+				if let Some(prefix_str) = lcp {
+					let typed = &line[start..pos];
+					if prefix_str.len() > typed.len() {
+						let is_single = matches.len() == 1;
+						let repl_str = if is_single {
+							matches[0].replacement.clone()
+						} else {
+							prefix_str.to_string()
+						};
+
+						return Ok((start, vec![Pair {
+							display: prefix_str.to_string(),
+							replacement: repl_str,
+						}]));
+					}
+				}
+			}
 
             return Ok((start, matches));
 		}
