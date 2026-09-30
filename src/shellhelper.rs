@@ -58,36 +58,41 @@ impl Completer for ShellHelper {
 			}
 		}
 
+		if let Some(path_var) = env::var_os("PATH") {
+			for path in env::split_paths(&path_var) {
+				if let Ok(entries) = read_dir(path) {
+					for entry in entries.flatten() {
+						if let Ok(file_name) = entry.file_name().into_string() {
+							if file_name.starts_with(prefix) {
+								if let Ok(metadata) = entry.metadata() {
+									if metadata.is_file() {
+										candidates.push(Pair {
+											display: file_name.clone(),
+											replacement: format!("{} ", file_name),
+										});
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if candidates.is_empty() {
-			println!("\x07");
+			println!("\x07"); // bell  character ~ bell code
 			let _ = io::stdout().flush();
 			candidates.push(Pair {
 				display: prefix.to_string(),
 				replacement: prefix.to_string(),
 			});
 			return Ok((0, candidates))
+		} else {
+			println!("\x07"); // bell  character ~ bell code
+			let _ = io::stdout().flush();
 		}
 
-		// if let Some(path_var) = env::var_os("PATH") {
-		// 	for path in env::split_paths(&path_var) {
-		// 		if let Ok(entries) = read_dir(path) {
-		// 			for entry in entries.flatten() {
-		// 				if let Ok(file_name) = entry.file_name().into_string() {
-		// 					if file_name.starts_with(prefix) {
-		// 						if let Ok(metadata) = entry.metadata() {
-		// 							if metadata.is_file() {
-		// 								candidates.push(Pair {
-		// 									display: file_name.clone(),
-		// 									replacement: format!("{} ", file_name),
-		// 								});
-		// 							}
-		// 						}
-		// 					}
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// }
+		
 
 		candidates.sort_by(|a, b| a.display.cmp(&b.display));
 		candidates.dedup_by(|a, b| a.display == b.display);
