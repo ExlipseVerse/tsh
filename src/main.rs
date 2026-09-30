@@ -111,15 +111,27 @@ fn parse_input(input: &str) -> Vec<String> {
     args
 }
 
-fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<File>) {
-    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>") {
+enum Redirection {
+    Stdout(File),
+    Stderr(File),
+}
+
+fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
+    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>") {
+        let redirect_type = &args[pos];
         let (clean_slice, redirect_path) = args.split_at(pos);
         let clean_args: Vec<&str> = clean_slice.iter().map(|s| s.as_str()).collect();
 
 
         if let Some(file_name) = redirect_path.get(1) {
             match File::create(file_name) {
-                Ok(file) => return (clean_args, Some(file)),
+                Ok(file) => {
+                    if redirect_type == "2>" {
+                        return (clean_args, Some(Redirection::Stderr(file)));
+                    } else {
+                        return (clean_args, Some(Redirection::Stdout(file)));
+                    }
+                }
                 Err(e) => {
                     println!("shell: failed to open redirect file: {}", e);
                     return (clean_args, None);
@@ -153,15 +165,23 @@ fn main() {
 
             match BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
                 Some(BuiltIn::Echo) => {
-                    let (args, file_o) = extract_redirection(cmd_args);
+                    let (args, redirect_o) = extract_redirection(cmd_args);
                     let output = args.join(" ");
 
-                    if let Some(mut file) = file_o {
-                        if let Err(e) =  writeln!(file, "{}", output) {
-                            println!("shell: write error: {}", e);
+                    match redirect_o {
+                        Some(Redirection::Stdout(mut file)) => {
+                            if let Err(e) = writeln!(file, "{}", output) {
+                                println!("shell: write error: {}", e);
+                            }
                         }
-                    } else {
-                        println!("{}", output);
+
+                        Some(Redirection::Stderr(_)) => {
+                            println!("{}", output);
+                        }
+
+                        None => {
+                            println!("{}", output);
+                        }
                     }
                 }
                 Some(BuiltIn::Type) => {
@@ -182,14 +202,21 @@ fn main() {
                 }
 
                 Some(BuiltIn::Pwd) => {
-                    let (_, file_o) = extract_redirection(cmd_args);
+                    let (_, redirect_o) = extract_redirection(cmd_args);
                     if let Ok(curr_dir) = env::current_dir() {
-                        if let Some(mut file) = file_o {
-                            if let Err(e) = writeln!(file, "{}", curr_dir.display()) {
-                                println!("shell: write error: {}", e);
+                        match redirect_o {
+                            Some(Redirection::Stdout(mut file)) => {
+                                if let Err(e) = writeln!(file, "{}", curr_dir.display()) {
+                                    println!("shell: write error: {}", e); 
+                                }
                             }
-                        } else {
-                            println!("{}", curr_dir.display());
+
+                            Some(Redirection::Stderr(_)) => {
+                                println!("{}", curr_dir.display());
+                            }
+                            None => {
+                                println!("{}", curr_dir.display());
+                            }
                         }
                     } else {
                         println!("Failed to get current directory");
@@ -244,12 +271,24 @@ fn main() {
                         let mut proc = Command::new(path);
                         proc.arg0(cmd_name);
                            
-                        let (args, file_o) = extract_redirection(cmd_args);
+                        let (args, redirect_o) = extract_redirection(cmd_args);
                         proc.args(&args);
 
-                        if let Some(file) = file_o {
-                            proc.stdout(file);
+                        match redirect_o {
+                            Some(Redirection::Stdout(file)) => {
+                                proc.stdout(file);
+                            }
+
+                            Some(Redirection::Stderr(file)) => {
+                                proc.stderr(file);
+                            }
+
+                            None => {}
                         }
+
+                        // if let Some(file) = redirect_o {
+                        //     proc.stdout(file);
+                        // }
                         
                         match proc.spawn() {
                             Ok(mut child) => {
