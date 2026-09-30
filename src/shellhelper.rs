@@ -49,17 +49,26 @@ impl Completer for ShellHelper {
 // !matches[0].replacement.ends_with(std::path::MAIN_SEPARATOR)
 		if line[..pos].contains(' ') {
 			let (start, n_matches) = FilenameCompleter::new().complete_path(line, pos)?;
+			if n_matches.is_empty() {
+				print!("\x07");
+				let _ = io::stdout().flush();
+				return Ok((0, Vec::new()));
+			}
 
 			let mut matches = Vec::new();
 			for candidate in n_matches {
 				let mut display = candidate.display.to_string();
 				let mut replacement = candidate.replacement.to_string();
 
-				if display.ends_with(std::path::MAIN_SEPARATOR) {
+				let is_dir = display.ends_with(std::path::MAIN_SEPARATOR) || replacement.ends_with(std::path::MAIN_SEPARATOR);
+
+				if is_dir {
+					if !display.ends_with(std::path::MAIN_SEPARATOR) {
+						display.push(std::path::MAIN_SEPARATOR);
+					}
 					if !replacement.ends_with(std::path::MAIN_SEPARATOR) {
 						replacement.push(std::path::MAIN_SEPARATOR);
 					}
-					
 				} else {
 					if !replacement.ends_with(' ') {
 						replacement.push(' ');
@@ -70,6 +79,10 @@ impl Completer for ShellHelper {
 					display,
 					replacement
 				});
+			}
+
+			if matches.len() == 1 {
+				return Ok((start, matches));
 			}
 
 			if !matches.is_empty() {
