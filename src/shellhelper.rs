@@ -55,13 +55,15 @@ impl Completer for ShellHelper {
 				let mut display = candidate.display.to_string();
 				let mut replacement = candidate.replacement.to_string();
 
-				if !replacement.ends_with(std::path::MAIN_SEPARATOR) {
-					if !display.ends_with(std::path::MAIN_SEPARATOR) {
-						display.push(std::path::MAIN_SEPARATOR);
+				if display.ends_with(std::path::MAIN_SEPARATOR) {
+					if !replacement.ends_with(std::path::MAIN_SEPARATOR) {
+						replacement.push(std::path::MAIN_SEPARATOR);
 					}
 					
 				} else {
-					replacement.push(' ');
+					if !replacement.ends_with(' ') {
+						replacement.push(' ');
+					}
 				}
 
 				matches.push(Pair {
