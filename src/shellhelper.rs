@@ -79,23 +79,18 @@ impl Completer for ShellHelper {
 			}
 		}
 
+		candidates.sort_by(|a, b| a.display.cmp(&b.display));
+		candidates.dedup_by(|a, b| a.display == b.display);
+
 		if candidates.is_empty() {
-			println!("\x07"); // bell  character ~ bell code
+			print!("\x07"); // bell  character ~ bell code
 			let _ = io::stdout().flush();
 			candidates.push(Pair {
 				display: prefix.to_string(),
 				replacement: prefix.to_string(),
 			});
 			return Ok((0, candidates))
-		} else {
-			println!("\x07"); // bell  character ~ bell code
-			let _ = io::stdout().flush();
 		}
-
-		
-
-		candidates.sort_by(|a, b| a.display.cmp(&b.display));
-		candidates.dedup_by(|a, b| a.display == b.display);
 
 		Ok((0, candidates))
 	}
