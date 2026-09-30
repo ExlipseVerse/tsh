@@ -48,7 +48,7 @@ impl Completer for ShellHelper {
 			if builtin_str.starts_with(prefix) {
 				candidates.push(Pair {
 					display: builtin_str.clone(),
-					replacement: builtin_str,
+					replacement: format!("{} ", builtin_str),
 				});
 			}
 		}
@@ -63,7 +63,7 @@ impl Completer for ShellHelper {
 									if metadata.is_file() {
 										candidates.push(Pair {
 											display: file_name.clone(),
-											replacement: file_name,
+											replacement: format!("{} ", file_name),
 										});
 									}
 								}
