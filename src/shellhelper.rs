@@ -3,7 +3,7 @@ use std::env;
 use std::fs::{read_dir, metadata};
 use std::io::{self, Write};
 use std::sync::Mutex;
-use rustyline::completion::{Completer, Pair};
+use rustyline::completion::{Completer, Pair, longest_common_prefix};
 use rustyline::Context;
 use rustyline::Result;
 use rustyline::hint::Hinter;
@@ -11,9 +11,7 @@ use rustyline::highlight::Highlighter;
 use rustyline::validate::Validator;
 use rustyline::Helper;
 
-pub struct ShellHelper {
-	last_completion: Mutex<Option<(String, usize)>>,
-}
+pub struct ShellHelper;
 
 
 impl Helper for ShellHelper {}
@@ -23,13 +21,13 @@ impl Hinter for ShellHelper {
 	type Hint = String;
 }
 
-impl ShellHelper {
-	pub fn new() -> Self {
-		Self {
-			last_completion: Mutex::new(None),
-		}
-	}
-}
+// impl ShellHelper {
+// 	pub fn new() -> Self {
+// 		Self {
+// 			last_completion: Mutex::new(None),
+// 		}
+// 	}
+// }
 
 impl Completer for ShellHelper {
 	type Candidate = Pair;
@@ -102,6 +100,28 @@ impl Completer for ShellHelper {
 			});
 			return Ok((0, candidates));
 		}
+
+		let display_names: Vec<String> = candidates.iter().map(|c| c.display.clone()).collect();
+		let lcp = longest_common_prefix(&display_names);
+
+		if let Some(prefix_str) = lcp {
+			if prefix_str.len() > prefix.len() {
+				let is_full_match = candidates.len() == 1 && prefix_str == candidates[0].display;
+
+				let replacement_string = if is_full_match {
+					format!("{} ", prefix_str)
+				} else {
+					prefix_str.to_string()
+				};
+
+				return Ok((0, vec![Pair { 
+					display: replacement_string.clone(), 
+					replacement: replacement_string 
+				}]));
+			}
+		}
+
+		
 
 		// if candidates.len() == 1 {
 		// 	let mut last = self.last_completion.lock().unwrap();

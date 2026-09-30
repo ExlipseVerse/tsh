@@ -165,7 +165,7 @@ fn main() {
     let config = Config::builder().build();
     let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
     rl.set_completion_type(CompletionType::List);
-    rl.set_helper(Some(ShellHelper::new()));
+    rl.set_helper(Some(ShellHelper));
     loop {
 
         // NEW READER
