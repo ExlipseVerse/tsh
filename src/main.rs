@@ -2,7 +2,7 @@ mod builtin;
 
 #[allow(unused_imports)]
 use std::io::{self, Write, Read, ErrorKind};
-use std::fs::{read_dir, write, metadata, File};
+use std::fs::{read_dir, write, metadata, File, OpenOptions};
 use std::os::unix::process::CommandExt;
 use std::env;
 use std::path::{PathBuf, Path};
@@ -117,14 +117,22 @@ enum Redirection {
 }
 
 fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
-    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>") {
+    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>" || arg == ">>" || arg == "1>>") {
         let redirect_type = &args[pos];
         let (clean_slice, redirect_path) = args.split_at(pos);
         let clean_args: Vec<&str> = clean_slice.iter().map(|s| s.as_str()).collect();
 
 
         if let Some(file_name) = redirect_path.get(1) {
-            match File::create(file_name) {
+
+            let is_append = redirect_type == ">>" || redirect_type == "1>>";
+            let file_result = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(is_append)
+                .open(file_name);
+
+            match file_result {
                 Ok(file) => {
                     if redirect_type == "2>" {
                         return (clean_args, Some(Redirection::Stderr(file)));
