@@ -1,6 +1,7 @@
 use crate::builtin::BuiltIn;
 use std::env;
 use std::fs::{read_dir, metadata};
+use std::io::{self, Write};
 use rustyline::completion::{Completer, Pair};
 use rustyline::Context;
 use rustyline::Result;
@@ -29,6 +30,10 @@ impl Completer for ShellHelper {
 		_ctx: &Context<'_>,
 	) -> Result<(usize, Vec<Self::Candidate>)> {
 		let mut candidates = Vec::new();
+		
+		if line[..pos].trim().is_empty() {
+			return Ok((0, candidates));
+		}
 
 		if line[..pos].contains(' ') {
 			return Ok((0, candidates));
@@ -53,26 +58,36 @@ impl Completer for ShellHelper {
 			}
 		}
 
-		if let Some(path_var) = env::var_os("PATH") {
-			for path in env::split_paths(&path_var) {
-				if let Ok(entries) = read_dir(path) {
-					for entry in entries.flatten() {
-						if let Ok(file_name) = entry.file_name().into_string() {
-							if file_name.starts_with(prefix) {
-								if let Ok(metadata) = entry.metadata() {
-									if metadata.is_file() {
-										candidates.push(Pair {
-											display: file_name.clone(),
-											replacement: format!("{} ", file_name),
-										});
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+		if candidates.is_empty() {
+			println!("\x07");
+			let _ = io::stdout().flush();
+			candidates.push(Pair {
+				display: prefix.to_string(),
+				replacement: prefix.to_string(),
+			});
+			return Ok((0, candidates))
 		}
+
+		// if let Some(path_var) = env::var_os("PATH") {
+		// 	for path in env::split_paths(&path_var) {
+		// 		if let Ok(entries) = read_dir(path) {
+		// 			for entry in entries.flatten() {
+		// 				if let Ok(file_name) = entry.file_name().into_string() {
+		// 					if file_name.starts_with(prefix) {
+		// 						if let Ok(metadata) = entry.metadata() {
+		// 							if metadata.is_file() {
+		// 								candidates.push(Pair {
+		// 									display: file_name.clone(),
+		// 									replacement: format!("{} ", file_name),
+		// 								});
+		// 							}
+		// 						}
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		candidates.sort_by(|a, b| a.display.cmp(&b.display));
 		candidates.dedup_by(|a, b| a.display == b.display);
