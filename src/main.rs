@@ -125,7 +125,7 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 
         if let Some(file_name) = redirect_path.get(1) {
 
-            let is_append = redirect_type == ">>" || redirect_type == "1>>";
+            let is_append = redirect_type == ">>" || redirect_type == "1>>" || redirect_type == "2>>";
             let file_result = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -134,7 +134,7 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 
             match file_result {
                 Ok(file) => {
-                    if redirect_type == "2>" {
+                    if redirect_type == "2>" || "2>>" {
                         return (clean_args, Some(Redirection::Stderr(file)));
                     } else {
                         return (clean_args, Some(Redirection::Stdout(file)));
