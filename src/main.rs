@@ -46,7 +46,31 @@ fn main() {
     rl.set_helper(Some(helper));
     loop {
 
-        
+        let mut indices_to_rm = Vec::new();
+        let current_len = job_list.len();
+
+        for (index, job) in job_list.iter_mut().enumerate() {
+            match job.child.try_wait() {
+                Ok(Some(_status)) => {
+                    let symbol = if index == current_len - 1 {
+                        "+"
+                    } else if index == current_len - 2 {
+                        "-"
+                    } else {
+                        " "
+                    };
+
+                    println!("[{}]{}  Done\t\t{}", job.id, symbol, job.cmd_string);
+                    indices_to_rm.push(index);
+                }
+
+                _=>{}
+            }
+        }
+
+        for index in indices_to_rm.into_iter().rev() {
+            job_list.remove(index);
+        }
 
         // NEW READER
 
