@@ -7,6 +7,7 @@ pub enum BuiltIn {
     Pwd,
     Cd,
     Complete,
+    Jobs,
 }
 
 impl BuiltIn {
@@ -18,6 +19,7 @@ impl BuiltIn {
             "pwd" => Some(BuiltIn::Pwd),
             "cd" => Some(BuiltIn::Cd),
             "complete" => Some(BuiltIn::Complete),
+            "jobs" => Some(BuiltIn::Jobs),
             _ => None,
         }
     }

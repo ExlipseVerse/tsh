@@ -344,6 +344,10 @@ fn main() {
                     }
                 }
 
+                Some(BuiltIn::Jobs) => {
+                    
+                }
+
                 Some(BuiltIn::Exit) => {
                     break;
                 }
