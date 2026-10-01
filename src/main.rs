@@ -212,11 +212,17 @@ fn main() {
             break;
         }
 
-        let command: Vec<String> = parse_input(&input);
+        let mut command: Vec<String> = parse_input(&input);
 
-        if let Some(cmd_name) = command.first() {
+        if let Some(cmd_name) = command.first().cloned() {
+
+            let run_in_bg = command.last().map(|a| a.as_str()) == Some("&");
+            if run_in_bg {
+                command.pop();
+            }
 
             let cmd_args = command.get(1..).unwrap_or(&[]);
+
 
             match BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
                 Some(BuiltIn::Echo) => {
@@ -345,7 +351,7 @@ fn main() {
                 }
 
                 Some(BuiltIn::Jobs) => {
-                    
+
                 }
 
                 Some(BuiltIn::Exit) => {
@@ -353,12 +359,14 @@ fn main() {
                 }
 
                 None => {
-                    if let Ok(path) = which::which(cmd_name) { // reads the path 
+                    if let Ok(path) = which::which(&cmd_name) { // reads the path 
                         // .args(&command[1..])
                         //     .spawn();
 
+
+
                         let mut proc = Command::new(path);
-                        proc.arg0(cmd_name);
+                        proc.arg0(&cmd_name);
                            
                         let (args, redirect_o) = extract_redirection(cmd_args);
                         proc.args(&args);
@@ -379,9 +387,15 @@ fn main() {
                         //     proc.stdout(file);
                         // }
                         
+                        
+
                         match proc.spawn() {
                             Ok(mut child) => {
-                                let _ = child.wait();
+                                if run_in_bg {
+                                    println!("[1] {}", child.id()); 
+                                } else {
+                                    let _ = child.wait();
+                                }
                             }
 
                             Err(e) => {
