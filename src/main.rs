@@ -242,7 +242,7 @@ fn main() {
                 Some(BuiltIn::Jobs) => {
                     if job_list.is_empty() {} else {
                         for job in &job_list {
-                            println!("[{}] Running\t\t{}", job.id, job.cmd_string);
+                            println!("[{}]+ Running\t\t{}", job.id, job.cmd_string);
                         }
                     }
                 }
