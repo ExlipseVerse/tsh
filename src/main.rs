@@ -318,12 +318,12 @@ fn main() {
                                     let pid = child.id();
                                     println!("[{}] {}", next_job_id, pid);
 
-                                    let cleaned_cmd = input.trim().strip_suffix('&').unwrap_or(&input).trim().to_string();
-
                                     if job_list.is_empty() {
                                         next_job_id = 1;
                                     }
-                                    
+
+                                    let cleaned_cmd = input.trim().strip_suffix('&').unwrap_or(&input).trim().to_string();
+
                                     job_list.push(Job {
                                         id: next_job_id,
                                         pid: pid,
