@@ -325,7 +325,7 @@ fn main() {
                                 }
                             }
 
-                            "-C" => { 
+                            "-c" => { 
                                 if let (Some(path), Some(cmd)) = (command.get(2), command.get(3)) {
                                     let mut registry = completion_reg.lock().unwrap();
                                     registry.insert(cmd.to_string(), format!("-C '{}'", path));
