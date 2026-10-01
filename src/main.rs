@@ -316,11 +316,12 @@ fn main() {
                             Ok(mut child) => {
                                 if run_in_bg {
                                     let pid = child.id();
-                                    println!("[{}] {}", next_job_id, pid);
-
+                                    
                                     if job_list.is_empty() {
                                         next_job_id = 1;
                                     }
+
+                                    println!("[{}] {}", next_job_id, pid);
 
                                     let cleaned_cmd = input.trim().strip_suffix('&').unwrap_or(&input).trim().to_string();
 
