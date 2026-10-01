@@ -317,8 +317,9 @@ fn main() {
                                 if run_in_bg {
                                     let pid = child.id();
                                     
-                                    if job_list.is_empty() {
-                                        next_job_id = 1;
+                                    next_job_id = 1;
+                                    while job_list.iter().any(|j| j.id == next_job_id) {
+                                        next_job_id += 1;
                                     }
 
                                     println!("[{}] {}", next_job_id, pid);
