@@ -6,6 +6,7 @@ pub enum BuiltIn {
     Exit,
     Pwd,
     Cd,
+    Complete,
 }
 
 impl BuiltIn {
@@ -16,6 +17,7 @@ impl BuiltIn {
             "exit" => Some(BuiltIn::Exit),
             "pwd" => Some(BuiltIn::Pwd),
             "cd" => Some(BuiltIn::Cd),
+            "complete" => Some(BuiltIn::Complete),
             _ => None,
         }
     }

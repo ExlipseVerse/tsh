@@ -273,10 +273,6 @@ fn main() {
                 }
 
                 Some(BuiltIn::Cd) => {
-                    // if command.len() < 1 {
-                        
-                    // }
-
                     if let Some(dir) = command.get(1) {
                         match dir.as_str() {
                             "~" => {
@@ -306,6 +302,10 @@ fn main() {
                     } else {
                         println!("missing argument");
                     }
+                }
+
+                Some(BuiltIn::Complete) => {
+                    
                 }
 
                 Some(BuiltIn::Exit) => {

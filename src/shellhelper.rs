@@ -50,7 +50,7 @@ impl Completer for ShellHelper {
 		if line[..pos].contains(' ') {
 			let (start, n_matches) = FilenameCompleter::new().complete_path(line, pos)?;
 			if n_matches.is_empty() {
-				print!("\x07");
+				print!("\x07"); //bell
 				let _ = io::stdout().flush();
 				return Ok((0, Vec::new()));
 			}
@@ -116,6 +116,7 @@ impl Completer for ShellHelper {
 			BuiltIn::Pwd,
 			BuiltIn::Echo,
 			BuiltIn::Exit,
+			BuiltIn::Complete
 		];
 
 		for builtin in &builtins {
