@@ -165,7 +165,7 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 }
 
 fn main() {
-    let completion_reg = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
+    let completion_reg = Arc::new(Mutex::new(HashMap::<String,String>::new()));
     let config = Config::builder().build();
     let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
     rl.set_completion_type(CompletionType::List);
@@ -316,8 +316,8 @@ fn main() {
                             "-p" => {
                                 if let Some(cmd) = command.get(2) {
                                     let reg = completion_reg.lock().unwrap();
-                                    if let Some(specs) = reg.get(cmd) {
-                                        println!("complete -c {} {}", cmd, specs.join(" "));
+                                    if let Some(spec) = reg.get(cmd) {
+                                        println!("complete {} {}", spec, cmd);
                                     } else {
                                         println!("complete: {}: no completion specification", cmd);
                                     }
@@ -326,12 +326,21 @@ fn main() {
                             }
 
                             "-c" => {
-                                if let Some(reg_cmd) = command.get(2) {
-                                    let flags = command.iter().skip(3).map(|s| s.to_string()).collect();
-                                    let mut reg = completion_reg.lock().unwrap();
-                                    reg.insert(reg_cmd.to_string(), flags);
+                                if let Some(flag) = command.get(2) {
+                                    if flag == "-C" {
+                                        if let Some(script_path) = command.get(3) {
+                                            if let Some(reg_cmd) = command.get(4) {
+                                                let mut registry = completion_reg.lock().unwrap();
+                                                
+                                                let spec_str = format!("-C '{}'", script_path);
+                                                registry.insert(reg_cmd.to_string(), spec_str);
+                                            }
+                                        }
+                                    }
                                 }
                             }
+
+                            "-c" if command.get(1) == Some(&"-C".to_string()) => {}
 
                             _=> {}
                         }

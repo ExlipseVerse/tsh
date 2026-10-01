@@ -14,7 +14,7 @@ use rustyline::Helper;
 
 
 pub struct ShellHelper {
-	pub registered_completions: Arc<Mutex<HashMap<String, Vec<String>>>>,
+	pub registered_completions: Arc<Mutex<HashMap<String, String>>>,
 }
 
 
@@ -26,7 +26,7 @@ impl Hinter for ShellHelper {
 }
 
 impl ShellHelper {
-	pub fn new(completions: Arc<Mutex<HashMap<String, Vec<String>>>>) -> Self {
+	pub fn new(completions: Arc<Mutex<HashMap<String, String>>>) -> Self {
 		Self {
 			registered_completions: completions,
 		}
@@ -49,7 +49,7 @@ impl Completer for ShellHelper {
 		}
 
 		let prefix = &line[..pos];
-// !matches[0].replacement.ends_with(std::path::MAIN_SEPARATOR)
+
 		if line[..pos].contains(' ') {
 			let words: Vec<&str> = line[..pos].split_whitespace().collect();
 			if let Some(&first_wrd) = words.first() {
@@ -59,10 +59,10 @@ impl Completer for ShellHelper {
 					let start = pos - curr_arg.len();
 
 					let mut custom_matches = Vec::new();
-					for opt in opts {
+					for opt in opts.split_whitespace() {
 						if opt.starts_with(curr_arg) {
 							custom_matches.push(Pair {
-								display: opt.clone(),
+								display: opt.to_string(),
 								replacement: format!("{} ", opt),
 							});
 						}
