@@ -8,11 +8,9 @@ use std::sync::{Arc,Mutex};
 use std::collections::HashMap;
 
 use std::io::{self, Write, Read, ErrorKind};
-use std::fs::{read_dir, write, metadata, File, OpenOptions};
 use std::os::unix::process::CommandExt;
 use std::env;
-use std::path::{PathBuf, Path};
-use std::process::{Command, Child};
+use std::process::{Command, Child, Stdio};
 
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
@@ -31,6 +29,65 @@ struct Job {
     pid: u32,
     cmd_string: String,
     child: Child
+}
+
+fn run_pipeline(input: &str) -> bool {
+    if !input.contains('|') {
+        return false;
+    }
+
+    let parts: Vec<&str> = input.split("|").collect();
+
+    if parts.len() != 2 {
+        eprintln!("error");
+        return true;
+    }
+
+    let cmd1_args = parse_input(parts[0].trim());
+    let cmd2_args = parse_input(parts[1].trim());
+
+    if cmd1_args.is_empty() || cmd2_args.is_empty() {
+        eprintln!("error: Invalid command structure around");
+        return true;
+    }
+
+    let mut cmd1_child = match Command::new(&cmd1_args[0])
+        .args(&cmd1_args[1..])
+        .stdout(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
+            eprintln!("Failed to execute first command: {}", e);
+            return true;
+        }
+    };
+
+    let cmd1_stdout = match cmd1_child.stdout.take() {
+        Some(stdout) => stdout,
+        None => {
+            eprintln!("Failed to capture stdout from the first command.");
+            return true;
+        }
+    };
+
+    let mut cmd2_child = match Command::new(&cmd2_args[0])
+        .args(&cmd2_args[1..])
+        .stdin(Stdio::from(cmd1_stdout))
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
+            eprintln!("Failed to execute second command: {}", e);
+            return true;
+        }
+    };
+
+
+    let _ = cmd1_child.wait();
+    let _ = cmd2_child.wait();
+
+    true
 }
 
 fn main() {
@@ -108,6 +165,10 @@ fn main() {
         
         if input.trim() == "exit" {
             break;
+        }
+
+        if run_pipeline(&input) {
+            continue;
         }
 
         let mut command: Vec<String> = parse_input(&input);
