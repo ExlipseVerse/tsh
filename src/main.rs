@@ -288,7 +288,7 @@ fn main() {
                             Ok(mut child) => {
                                 if run_in_bg {
                                     let pid = child.id();
-                                    println!("[1] {}", child.id());
+                                    println!("[{}] {}", next_job_id, pid);
 
                                     job_list.push(Job {
                                         id: next_job_id,
