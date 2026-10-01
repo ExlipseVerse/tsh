@@ -75,6 +75,8 @@ impl Completer for ShellHelper {
 							.arg(first_wrd)				
 							.arg(curr_arg)
 							.arg(prev_word)
+							.env("COMP_LINE", line)
+							.env("COMP_POINT", pos.to_string())
 							.output()
 						{
 							if output.status.success() {
