@@ -325,22 +325,12 @@ fn main() {
                                 }
                             }
 
-                            "-c" => {
-                                if let Some(flag) = command.get(2) {
-                                    if flag == "-C" {
-                                        if let Some(script_path) = command.get(3) {
-                                            if let Some(reg_cmd) = command.get(4) {
-                                                let mut registry = completion_reg.lock().unwrap();
-                                                
-                                                let spec_str = format!("-C '{}'", script_path);
-                                                registry.insert(reg_cmd.to_string(), spec_str);
-                                            }
-                                        }
-                                    }
+                            "-C" => { 
+                                if let (Some(path), Some(cmd)) = (command.get(2), command.get(3)) {
+                                    let mut registry = completions_registry.lock().unwrap();
+                                    registry.insert(cmd.to_string(), format!("-C '{}'", path));
                                 }
                             }
-
-                            "-c" if command.get(1) == Some(&"-C".to_string()) => {}
 
                             _=> {}
                         }
