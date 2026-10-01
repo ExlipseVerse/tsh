@@ -332,6 +332,13 @@ fn main() {
                                 }
                             }
 
+                            "-r" => {
+                                if let Some(cmd) = command.get(2) {
+                                    let mut reg = completion_reg.lock().unwrap();
+                                    reg.remove(cmd);
+                                }
+                            }
+
                             _=> {}
                         }
                     }
