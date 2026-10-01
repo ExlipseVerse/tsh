@@ -1,5 +1,6 @@
 use crate::builtin::BuiltIn;
 use std::env;
+use std::process::Command;
 use std::fs::{read_dir, metadata};
 use std::io::{self, Write};
 use std::sync::{Arc,Mutex};
@@ -57,6 +58,41 @@ impl Completer for ShellHelper {
 				if let Some(opts) = reg.get(first_wrd) {
 					let curr_arg = if line[..pos].ends_with(' ') { "" } else { words.last().copied().unwrap_or("") };
 					let start = pos - curr_arg.len();
+
+					if opts.starts_with("-C ") || opts.starts_with("-c ") {
+						let raw_p = &opts[3..];
+						let script_path = raw_p
+							.trim_matches('\'')
+							.to_string();
+
+
+							if let Ok(output) = Command::new(&script_path)
+								.arg(line)
+								.arg(curr_arg)
+								.output()
+							{
+								if output.status.success() {
+									let stdout_str = String::from_utf8_lossy(&output.stdout);
+									let mut s_candidates = Vec::new();
+
+									for li in stdout_str.lines() {
+										let candidate = li.trim();
+										if !candidate.is_empty() && candidate.starts_with(curr_arg) {
+											s_candidates.push(Pair {
+												display: candidate.to_string(),
+												replacement: format!("{} ", candidate),
+											})
+										}
+									}
+
+									if !s_candidates.is_empty() {
+										return Ok((start, s_candidates));
+									}
+								}
+							}
+					}
+
+					
 
 					let mut custom_matches = Vec::new();
 					for opt in opts.split_whitespace() {
