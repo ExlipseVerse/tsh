@@ -2,6 +2,9 @@ mod builtin;
 mod shellhelper;
 
 #[allow(unused_imports)]
+use std::sync::{Arc,Mutex};
+use std::collections::HashMap;
+
 use std::io::{self, Write, Read, ErrorKind};
 use std::fs::{read_dir, write, metadata, File, OpenOptions};
 use std::os::unix::process::CommandExt;
@@ -162,10 +165,13 @@ fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
 }
 
 fn main() {
+    let completion_reg = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let config = Config::builder().build();
     let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
     rl.set_completion_type(CompletionType::List);
-    rl.set_helper(Some(ShellHelper));
+
+    let helper = ShellHelper::new(Arc::clone(&completion_reg));
+    rl.set_helper(Some(helper));
     loop {
 
         // NEW READER
@@ -306,15 +312,28 @@ fn main() {
 
                 Some(BuiltIn::Complete) => {
                     if let Some(option) = command.get(1) {
-                        
-                        let options = [
-                            "-p"
-                        ];
-
-                        if options.contains(&option.to_lowercase().as_str()) {
-                            if let Some(cmd) = command.get(2) {
-                                println!("complete: {}: no completion specification", cmd);
+                        match option.to_lowercase().as_str() {
+                            "-p" => {
+                                if let Some(cmd) = command.get(2) {
+                                    let reg = completion_reg.lock().unwrap();
+                                    if let Some(specs) = reg.get(cmd) {
+                                        println!("complete -c {} {}", cmd, specs.join(" "));
+                                    } else {
+                                        println!("complete: {}: no completion specification", cmd);
+                                    }
+                                    
+                                }
                             }
+
+                            "-c" => {
+                                if let Some(reg_cmd) = command.get(2) {
+                                    let flags = command.iter().skip(3).map(|s| s.to_string()).collect();
+                                    let mut reg = completion_reg.lock().unwrap();
+                                    reg.insert(reg_cmd.to_string(), flags);
+                                }
+                            }
+
+                            _=> {}
                         }
                     }
                 }

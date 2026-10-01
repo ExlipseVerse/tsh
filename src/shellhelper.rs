@@ -2,7 +2,8 @@ use crate::builtin::BuiltIn;
 use std::env;
 use std::fs::{read_dir, metadata};
 use std::io::{self, Write};
-use std::sync::Mutex;
+use std::sync::{Arc,Mutex};
+use std::collections::HashMap;
 use rustyline::completion::{Completer, Pair, FilenameCompleter, longest_common_prefix};
 use rustyline::Context;
 use rustyline::Result;
@@ -12,7 +13,9 @@ use rustyline::validate::Validator;
 use rustyline::Helper;
 
 
-pub struct ShellHelper;
+pub struct ShellHelper {
+	pub registered_completions: Arc<Mutex<HashMap<String, Vec<String>>>>,
+}
 
 
 impl Helper for ShellHelper {}
@@ -22,13 +25,13 @@ impl Hinter for ShellHelper {
 	type Hint = String;
 }
 
-// impl ShellHelper {
-// 	pub fn new() -> Self {
-// 		Self {
-// 			last_completion: Mutex::new(None),
-// 		}
-// 	}
-// }
+impl ShellHelper {
+	pub fn new(completions: Arc<Mutex<HashMap<String, Vec<String>>>>) -> Self {
+		Self {
+			registered_completions: completions,
+		}
+	}
+}
 
 impl Completer for ShellHelper {
 	type Candidate = Pair;
@@ -48,6 +51,29 @@ impl Completer for ShellHelper {
 		let prefix = &line[..pos];
 // !matches[0].replacement.ends_with(std::path::MAIN_SEPARATOR)
 		if line[..pos].contains(' ') {
+			let words: Vec<&str> = line[..pos].split_whitespace().collect();
+			if let Some(&first_wrd) = words.first() {
+				let reg = self.registered_completions.lock().unwrap();
+				if let Some(opts) = reg.get(first_wrd) {
+					let curr_arg = if line[..pos].ends_with(' ') { "" } else { words.last().copied().unwrap_or("") };
+					let start = pos - curr_arg.len();
+
+					let mut custom_matches = Vec::new();
+					for opt in opts {
+						if opt.starts_with(curr_arg) {
+							custom_matches.push(Pair {
+								display: opt.clone(),
+								replacement: format!("{} ", opt),
+							});
+						}
+					}
+
+					if !custom_matches.is_empty() {
+						return Ok((start, custom_matches));
+					}
+				}
+			}
+
 			let (start, n_matches) = FilenameCompleter::new().complete_path(line, pos)?;
 			if n_matches.is_empty() {
 				print!("\x07"); //bell
@@ -182,38 +208,6 @@ impl Completer for ShellHelper {
 				}]));
 			}
 		}
-
-		
-
-		// if candidates.len() == 1 {
-		// 	let mut last = self.last_completion.lock().unwrap();
-		// 	*last = None;
-		// 	return Ok((0, candidates));
-		// }
-
-		// let mut last = self.last_completion.lock().unwrap();
-		// let curr_count = match &*last {
-		// 	Some((prev_p, count)) if prev_p == prefix => count + 1,
-		// 	_ => 1
-		// };
-
-		// *last = Some((prefix.to_string(), curr_count));
-
-
-		// if curr_count == 1 {
-		// 	print!("\x07");
-        //     let _ = io::stdout().flush();
-        //     return Ok((0, Vec::new()));
-		// } else {
-		// 	println!();
-
-		// 	let names: Vec<String> = candidates.iter().map(|c| c.display.clone()).collect();
-		// 	println!("{}", names.join(" "));
-
-		// 	*last = None;
-
-		// 	return Ok((0, Vec::new()));
-		// }
 
 		Ok((0, candidates))
 	}
