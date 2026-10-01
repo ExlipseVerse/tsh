@@ -305,7 +305,18 @@ fn main() {
                 }
 
                 Some(BuiltIn::Complete) => {
-                    
+                    if let Some(option) = command.get(1) {
+                        
+                        let options = [
+                            "-p"
+                        ];
+
+                        if options.contains(&option.to_lowercase().as_str()) {
+                            if let Some(cmd) = command.get(2) {
+                                println!("complete: {}: no completion specification", cmd);
+                            }
+                        }
+                    }
                 }
 
                 Some(BuiltIn::Exit) => {
