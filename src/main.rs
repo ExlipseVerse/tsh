@@ -1,5 +1,7 @@
 mod builtin;
 mod shellhelper;
+mod parser;
+mod redirection;
 
 #[allow(unused_imports)]
 use std::sync::{Arc,Mutex};
@@ -10,7 +12,7 @@ use std::fs::{read_dir, write, metadata, File, OpenOptions};
 use std::os::unix::process::CommandExt;
 use std::env;
 use std::path::{PathBuf, Path};
-use std::process::Command;
+use std::process::{Command, Child};
 
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
@@ -21,150 +23,20 @@ use rustyline::CompletionType;
 use builtin::BuiltIn;
 use shellhelper::ShellHelper;
 
-// fn fetchPath() -> Option<Vec<PathBuf>> {
-//     if let Some(path_var) = env::var_os("PATH") {
-//         Some(env::split_paths(&path_var).collect())
-//     } else {
-//         None
-//     }
-// }
+use parser::parse_input;
+use redirection::{Redirection, extract_redirection};
 
-// fn is_executable(path: &Path) -> bool {
-//     path.is_file() && path.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
-// }
-
-fn parse_input(input: &str) -> Vec<String> {
-    let mut args = Vec::new(); // we create an array []
-    let mut current_arg = String::new(); // we create a string to store the current argument
-    let mut in_single_quotes = false; // we create a boolean to check if we are in single quotes
-    let mut in_double_quotes = false;
-    let mut has_content = false; // we create a boolean to check if we have content in the current argument
-    let mut is_escaped = false;
-
-
-    for c in input.chars() { // by for example a, b, c
-
-        if is_escaped {
-            if in_double_quotes {
-                match c {
-                    '"' | '\\' => {    
-                        current_arg.push(c);
-                    }
-
-                    _ => {
-                        current_arg.push('\\');
-                        current_arg.push(c);
-                    }
-                }
-            } else {
-                current_arg.push(c);
-            }
-            
-            has_content = true;
-            is_escaped = false;
-            continue
-        }
-        
-        match c {
-            '\\' => {
-                if in_single_quotes {
-                    current_arg.push(c);
-                } else {
-                    is_escaped = true;
-                }
-            }
-
-            '\'' => {
-                if in_double_quotes {
-                    current_arg.push(c);
-                } else {
-                    in_single_quotes = !in_single_quotes;
-                    has_content = true;
-                }
-            }
-
-            '"' => {
-                if in_single_quotes {
-                    current_arg.push(c);
-                } else {
-                    in_double_quotes = !in_double_quotes;
-                    has_content = true;
-                }
-            }
-
-            ' ' | '\t' | '\n' | '\r' => {
-                if in_single_quotes || in_double_quotes {
-                    current_arg.push(c);
-                } else {
-                    if has_content || !current_arg.is_empty() {
-                        args.push(current_arg.clone());
-                        current_arg.clear();
-                        has_content = false;
-                    }
-                }
-            }
-
-            _ => {
-                current_arg.push(c);
-                has_content = true;
-            }
-        }
-
-    }
-
-    if is_escaped {
-        current_arg.push('\\');
-    }
-    if has_content || !current_arg.is_empty() {
-        args.push(current_arg);
-    }
-
-    args
-}
-
-enum Redirection {
-    Stdout(File),
-    Stderr(File),
-}
-
-fn extract_redirection(args: &[String]) -> (Vec<&str>, Option<Redirection>) {
-    if let Some(pos) = args.iter().position(|arg| arg == ">" || arg == "1>" || arg == "2>" || arg == ">>" || arg == "1>>" || arg == "2>>") {
-        let redirect_type = &args[pos];
-        let (clean_slice, redirect_path) = args.split_at(pos);
-        let clean_args: Vec<&str> = clean_slice.iter().map(|s| s.as_str()).collect();
-
-
-        if let Some(file_name) = redirect_path.get(1) {
-
-            let is_append = redirect_type == ">>" || redirect_type == "1>>" || redirect_type == "2>>";
-            let file_result = OpenOptions::new()
-                .write(true)
-                .create(true)
-                .append(is_append)
-                .open(file_name);
-
-            match file_result {
-                Ok(file) => {
-                    if redirect_type == "2>" || redirect_type == "2>>" {
-                        return (clean_args, Some(Redirection::Stderr(file)));
-                    } else {
-                        return (clean_args, Some(Redirection::Stdout(file)));
-                    }
-                }
-                Err(e) => {
-                    println!("shell: failed to open redirect file: {}", e);
-                    return (clean_args, None);
-                }
-            }
-        } 
-
-        (clean_args, None)
-    } else {
-        (args.iter().map(|s| s.as_str()).collect(), None)
-    }
+struct Job {
+    id: usize,
+    pid: u32,
+    cmd_string: String,
+    child: Child
 }
 
 fn main() {
+    let mut job_list: Vec<Job> = Vec::new();
+    let mut next_job_id = 1;
+
     let completion_reg = Arc::new(Mutex::new(HashMap::<String,String>::new()));
     let config = Config::builder().build();
     let mut rl = Editor::<ShellHelper, _>::with_config(config).expect("Failed to initialize line reader"); //creating the reader editor
@@ -173,6 +45,23 @@ fn main() {
     let helper = ShellHelper::new(Arc::clone(&completion_reg));
     rl.set_helper(Some(helper));
     loop {
+
+        job_list.retain_mut(|job| {
+            match job.child.try_wait() {
+                Ok(Some(_status)) => {
+                    println!("[{}] Done\t\t{}", job.id, job.cmd_string);
+                    true
+                }
+
+                Ok(None) => {
+                    true
+                }
+
+                Err(_) => {
+                    false
+                }
+            }
+        });
 
         // NEW READER
 
@@ -351,7 +240,11 @@ fn main() {
                 }
 
                 Some(BuiltIn::Jobs) => {
-
+                    if job_list.is_empty() {} else {
+                        for job in &job_list {
+                            println!("[{}] Running\t\t{}", job.id, job.cmd_string);
+                        }
+                    }
                 }
 
                 Some(BuiltIn::Exit) => {
@@ -383,16 +276,21 @@ fn main() {
                             None => {}
                         }
 
-                        // if let Some(file) = redirect_o {
-                        //     proc.stdout(file);
-                        // }
-                        
-                        
-
                         match proc.spawn() {
                             Ok(mut child) => {
                                 if run_in_bg {
-                                    println!("[1] {}", child.id()); 
+                                    let pid = child.id();
+                                    println!("[1] {}", child.id());
+
+                                    job_list.push(Job {
+                                        id: next_job_id,
+                                        pid: pid,
+                                        cmd_string: input.clone(),
+                                        child
+                                    });
+
+                                    next_job_id += 1;
+
                                 } else {
                                     let _ = child.wait();
                                 }
