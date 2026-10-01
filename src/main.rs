@@ -46,22 +46,22 @@ fn main() {
     rl.set_helper(Some(helper));
     loop {
 
-        job_list.retain_mut(|job| {
-            match job.child.try_wait() {
-                Ok(Some(_status)) => {
-                    println!("[{}] Done\t\t{}", job.id, job.cmd_string);
-                    true
-                }
+        // job_list.retain_mut(|job| {
+        //     match job.child.try_wait() {
+        //         Ok(Some(_status)) => {
+        //             println!("[{}] Done\t\t{}", job.id, job.cmd_string);
+        //             true
+        //         }
 
-                Ok(None) => {
-                    true
-                }
+        //         Ok(None) => {
+        //             true
+        //         }
 
-                Err(_) => {
-                    false
-                }
-            }
-        });
+        //         Err(_) => {
+        //             false
+        //         }
+        //     }
+        // });
 
         // NEW READER
 
@@ -240,10 +240,18 @@ fn main() {
                 }
 
                 Some(BuiltIn::Jobs) => {
-                    if job_list.is_empty() {} else {
-                        for job in &job_list {
-                            println!("[{}]+ Running\t\t{}", job.id, job.cmd_string);
-                        }
+                    let len = job_list.len();
+
+                    for (index, job) in job_list.iter().enumerate() {
+                        let symbol = if index == len - 1 {
+                            "+"
+                        } else if index == len - 2 {
+                            "-"
+                        } else {
+                            " "
+                        };
+
+                        println!("[{}]{} Running\t\t{}", job.id, symbol, job.cmd_string);
                     }
                 }
 
