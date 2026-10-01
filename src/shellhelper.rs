@@ -65,34 +65,38 @@ impl Completer for ShellHelper {
 							.trim_matches('\'')
 							.to_string();
 
+						let prev_word = if words.len() > 1 {
+							words[words.len()-2]
+						} else {
+							first_wrd
+						};
 
-							if let Ok(output) = Command::new(&script_path)
-								.arg(line)
-								.arg(curr_arg)
-								.output()
-							{
-								if output.status.success() {
-									let stdout_str = String::from_utf8_lossy(&output.stdout);
-									let mut s_candidates = Vec::new();
+						if let Ok(output) = Command::new(&script_path)
+							.arg(first_wrd)				
+							.arg(curr_arg)
+							.arg(prev_word)
+							.output()
+						{
+							if output.status.success() {
+								let stdout_str = String::from_utf8_lossy(&output.stdout);
+								let mut s_candidates = Vec::new();
 
-									for li in stdout_str.lines() {
-										let candidate = li.trim();
-										if !candidate.is_empty() && candidate.starts_with(curr_arg) {
-											s_candidates.push(Pair {
-												display: candidate.to_string(),
-												replacement: format!("{} ", candidate),
-											})
-										}
-									}
-
-									if !s_candidates.is_empty() {
-										return Ok((start, s_candidates));
+								for li in stdout_str.lines() {
+									let candidate = li.trim();
+									if !candidate.is_empty() && candidate.starts_with(curr_arg) {
+										s_candidates.push(Pair {
+											display: candidate.to_string(),
+											replacement: format!("{} ", candidate),
+										})
 									}
 								}
-							}
-					}
 
-					
+								if !s_candidates.is_empty() {
+									return Ok((start, s_candidates));
+								}
+							}
+						}
+					}
 
 					let mut custom_matches = Vec::new();
 					for opt in opts.split_whitespace() {
