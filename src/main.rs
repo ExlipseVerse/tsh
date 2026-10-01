@@ -46,22 +46,7 @@ fn main() {
     rl.set_helper(Some(helper));
     loop {
 
-        // job_list.retain_mut(|job| {
-        //     match job.child.try_wait() {
-        //         Ok(Some(_status)) => {
-        //             println!("[{}] Done\t\t{}", job.id, job.cmd_string);
-        //             true
-        //         }
-
-        //         Ok(None) => {
-        //             true
-        //         }
-
-        //         Err(_) => {
-        //             false
-        //         }
-        //     }
-        // });
+        
 
         // NEW READER
 
@@ -241,8 +226,9 @@ fn main() {
 
                 Some(BuiltIn::Jobs) => {
                     let len = job_list.len();
+                    let mut to_rm = Vec::new();
 
-                    for (index, job) in job_list.iter().enumerate() {
+                    for (index, job) in job_list.iter_mut().enumerate() {
                         let symbol = if index == len - 1 {
                             "+"
                         } else if index == len - 2 {
@@ -251,8 +237,26 @@ fn main() {
                             " "
                         };
 
-                        println!("[{}]{} Running\t\t{}", job.id, symbol, job.cmd_string);
+                        match job.child.try_wait() {
+                            Ok(Some(_status)) => {
+                                println!("[{}]{} Done\t\t{}", job.id, symbol, job.cmd_string);
+                                to_rm.push(index);
+                            }
+
+                            Ok(None) => {
+                                println!("[{}]{}  Running\t\t{} &", job.id, symbol, job.cmd_string);
+                            }
+
+                            Err(_) => {
+                                to_rm.remove(index);
+                            }
+                        };
                     }
+
+                    for index in to_rm.into_iter().rev() {
+                        job_list.remove(index);
+                    }
+
                 }
 
                 Some(BuiltIn::Exit) => {
@@ -290,10 +294,12 @@ fn main() {
                                     let pid = child.id();
                                     println!("[{}] {}", next_job_id, pid);
 
+                                    let cleaned_cmd = input.trim().strip_suffix('&').unwrap_or(&input).trim().to_string();
+
                                     job_list.push(Job {
                                         id: next_job_id,
                                         pid: pid,
-                                        cmd_string: input.clone(),
+                                        cmd_string: cleaned_cmd,
                                         child
                                     });
 
