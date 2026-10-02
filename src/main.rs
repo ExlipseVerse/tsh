@@ -28,13 +28,14 @@ use parser::parse_input;
 use redirection::{Redirection, extract_redirection};
 
 
+use std::io::{Read, Write};
+
 fn run_pipeline(input: &str, shell: &mut Shell) -> bool {
     if !input.contains('|') {
         return false;
     }
 
     let parts: Vec<&str> = input.split("|").collect();
-
     if parts.len() != 2 {
         eprintln!("error");
         return true;
@@ -48,54 +49,62 @@ fn run_pipeline(input: &str, shell: &mut Shell) -> bool {
         return true;
     }
 
-    let mut cap_output: Vec<u8> = Vec::new();
-
     let cmd1_name = &cmd1_args[0];
     let (args1, _) = extract_redirection(&cmd1_args[1..]);
-
-    if let Some(b) = BuiltIn::from_str(cmd1_name.trim().to_lowercase().as_str()) {
-        let _flow = b.run_builtin(&args1, &mut cap_output, shell);
-    } else if let Ok(p1) = which::which(cmd1_name) {
-        let mut proc1 = Command::new(p1);
-        proc1.arg0(cmd1_name);
-        proc1.args(&args1);
-        proc1.stdout(Stdio::piped());
-
-        match proc1.spawn() {
-            Ok(mut child1) => {
-                if let Some(mut stdout1) = child1.stdout.take() {
-                    let _ = io::copy(&mut stdout1, &mut cap_output);
-                }
-                let _ = child1.wait();
-            }
-            Err(e) => {
-                eprintln!("Failed to execute first command: {}", e);
-                return true;
-            }
-        }
-    } else {
-        eprintln!("{}: command not found", cmd1_name);
-        return true;
-    }
-
 
     let cmd2_name = &cmd2_args[0];
     let (args2, redirect_o2) = extract_redirection(&cmd2_args[1..]);
 
-    if let Some(b2) = BuiltIn::from_str(cmd2_name.trim().to_lowercase().as_str()) {
-        match redirect_o2 {
-            Some(Redirection::Stdout(mut file)) => {
-                let _flow = b2.run_builtin(&args2, &mut file, shell);
-            }
-            _ => {
-                let _flow = b2.run_builtin(&args2, &mut io::stdout(), shell);
+    let is_cmd1_builtin = BuiltIn::from_str(cmd1_name.trim().to_lowercase().as_str()).is_some();
+    let is_cmd2_builtin = BuiltIn::from_str(cmd2_name.trim().to_lowercase().as_str()).is_some();
+
+    if is_cmd1_builtin || is_cmd2_builtin {
+        let mut intermediate_output = Vec::new();
+        if let Some(b1) = BuiltIn::from_str(cmd1_name.trim().to_lowercase().as_str()) {
+            let _ = b1.run_builtin(&args1, &mut intermediate_output, shell);
+        } else if let Ok(path1) = which::which(cmd1_name) {
+            if let Ok(mut child1) = Command::new(path1).arg0(cmd1_name).args(&args1).stdout(Stdio::piped()).spawn() {
+                if let Some(mut stdout1) = child1.stdout.take() {
+                    let _ = io::copy(&mut stdout1, &mut intermediate_output);
+                }
+                let _ = child1.wait();
             }
         }
-    } else if let Ok(path2) = which::which(cmd2_name) {
+
+        if let Some(b2) = BuiltIn::from_str(cmd2_name.trim().to_lowercase().as_str()) {
+            match redirect_o2 {
+                Some(Redirection::Stdout(mut file)) => { let _ = b2.run_builtin(&args2, &mut file, shell); }
+                _ => { let _ = b2.run_builtin(&args2, &mut io::stdout(), shell); }
+            }
+        } else if let Ok(path2) = which::which(cmd2_name) {
+            if let Ok(mut child2) = Command::new(path2).arg0(cmd2_name).args(&args2).stdin(Stdio::piped()).spawn() {
+                if let Some(mut stdin2) = child2.stdin.take() {
+                    let _ = stdin2.write_all(&intermediate_output);
+                }
+                let _ = child2.wait();
+            }
+        }
+        return true;
+    }
+
+    if let (Ok(path1), Ok(path2)) = (which::which(cmd1_name), which::which(cmd2_name)) {
+        let mut child1 = match Command::new(path1)
+            .arg0(cmd1_name)
+            .args(&args1)
+            .stdout(Stdio::piped())
+            .spawn()
+        {
+            Ok(child) => child,
+            Err(e) => {
+                eprintln!("Failed to execute first command: {}", e);
+                return true;
+            }
+        };
+
+        let cmd1_stdout = child1.stdout.take().unwrap();
+
         let mut proc2 = Command::new(path2);
-        proc2.arg0(cmd2_name);
-        proc2.args(&args2);
-        proc2.stdin(Stdio::piped());
+        proc2.arg0(cmd2_name).args(&args2).stdin(Stdio::from(cmd1_stdout));
 
         match redirect_o2 {
             Some(Redirection::Stdout(file)) => { proc2.stdout(file); }
@@ -103,25 +112,26 @@ fn run_pipeline(input: &str, shell: &mut Shell) -> bool {
             None => {}
         }
 
-        match proc2.spawn() {
-            Ok(mut child2) => {
-                if let Some(mut stdin2) = child2.stdin.take() {
-                    use io::Write;
-                    let _ = stdin2.write_all(&cap_output);
-                }
-                let _ = child2.wait();
-            }
+        let mut child2 = match proc2.spawn() {
+            Ok(child) => child,
             Err(e) => {
                 eprintln!("Failed to execute second command: {}", e);
+                let _ = child1.kill();
                 return true;
             }
-        }
+        };
+
+        let _ = child2.wait();
+        
+        let _ = child1.kill(); 
+        let _ = child1.wait();
     } else {
-        eprintln!("{}: command not found", cmd2_name);
+        eprintln!("command not found");
     }
 
     true
 }
+
 
 fn main() {
     let completions = Arc::new(Mutex::new(HashMap::<String,String>::new()));
