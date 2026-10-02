@@ -13,7 +13,8 @@ use std::collections::HashMap;
 
 use std::io;
 use std::os::unix::process::CommandExt;
-use std::process::{Command, Stdio};
+use std::process::{Command, Stdio, Child};
+
 
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
@@ -36,97 +37,146 @@ fn run_pipeline(input: &str, shell: &mut Shell) -> bool {
     }
 
     let parts: Vec<&str> = input.split("|").collect();
-    if parts.len() != 2 {
-        eprintln!("error");
-        return true;
+    if parts.is_empty() {
+        return false;
     }
 
-    let cmd1_args = parse_input(parts[0].trim());
-    let cmd2_args = parse_input(parts[1].trim());
-
-    if cmd1_args.is_empty() || cmd2_args.is_empty() {
-        eprintln!("error: Invalid command structure around");
-        return true;
+    let mut commands_args = Vec::new();
+    for part in parts {
+        let parsed = parse_input(part.trim());
+        if parsed.is_empty() {
+            eprintln!("error: Invalid command structure around pipe");
+            return true;
+        }
+        commands_args.push(parsed);
     }
 
-    let cmd1_name = &cmd1_args[0];
-    let (args1, _) = extract_redirection(&cmd1_args[1..]);
+    let num_commands = commands_args.len();
 
-    let cmd2_name = &cmd2_args[0];
-    let (args2, redirect_o2) = extract_redirection(&cmd2_args[1..]);
+    let has_builtin = commands_args.iter().any(|cmd| {
+        BuiltIn::from_str(cmd[0].trim().to_lowercase().as_str()).is_some()
+    });
 
-    let is_cmd1_builtin = BuiltIn::from_str(cmd1_name.trim().to_lowercase().as_str()).is_some();
-    let is_cmd2_builtin = BuiltIn::from_str(cmd2_name.trim().to_lowercase().as_str()).is_some();
+    if has_builtin {
+        let mut intermediate_output: Vec<u8> = Vec::new();
 
-    if is_cmd1_builtin || is_cmd2_builtin {
-        let mut intermediate_output = Vec::new();
-        if let Some(b1) = BuiltIn::from_str(cmd1_name.trim().to_lowercase().as_str()) {
-            let _ = b1.run_builtin(&args1, &mut intermediate_output, shell);
-        } else if let Ok(path1) = which::which(cmd1_name) {
-            if let Ok(mut child1) = Command::new(path1).arg0(cmd1_name).args(&args1).stdout(Stdio::piped()).spawn() {
-                if let Some(mut stdout1) = child1.stdout.take() {
-                    let _ = io::copy(&mut stdout1, &mut intermediate_output);
+        for (i, cmd_args) in commands_args.iter().enumerate() {
+            let cmd_name = &cmd_args[0];
+            let (args, redirect_o) = extract_redirection(&cmd_args[1..]);
+            
+            let is_last = i == num_commands - 1;
+            let mut current_output = Vec::new();
+
+            if let Some(b) = BuiltIn::from_str(cmd_name.trim().to_lowercase().as_str()) {
+                if is_last {
+                    match redirect_o {
+                        Some(Redirection::Stdout(mut file)) => { let _ = b.run_builtin(&args, &mut file, shell); }
+                        _ => { let _ = b.run_builtin(&args, &mut io::stdout(), shell); }
+                    }
+                } else {
+                    let _ = b.run_builtin(&args, &mut current_output, shell);
                 }
-                let _ = child1.wait();
+            } else if let Ok(path) = which::which(cmd_name) {
+                let mut proc = Command::new(path);
+                proc.arg0(cmd_name).args(&args);
+
+                if !intermediate_output.is_empty() {
+                    proc.stdin(Stdio::piped());
+                }
+                
+                if !is_last {
+                    proc.stdout(Stdio::piped());
+                } else {
+                    match redirect_o {
+                        Some(Redirection::Stdout(file)) => { proc.stdout(file); }
+                        Some(Redirection::Stderr(file)) => { proc.stderr(file); }
+                        None => {}
+                    }
+                }
+
+                if let Ok(mut child) = proc.spawn() {
+                    if !intermediate_output.is_empty() {
+                        if let Some(mut stdin) = child.stdin.take() {
+                            let _ = stdin.write_all(&intermediate_output);
+                        }
+                    }
+
+                    if !is_last {
+                        if let Some(mut stdout) = child.stdout.take() {
+                            let _ = io::copy(&mut stdout, &mut current_output);
+                        }
+                    }
+                    let _ = child.wait();
+                }
+            } else {
+                eprintln!("{}: command not found", cmd_name);
+                return true;
             }
+
+            intermediate_output = current_output;
         }
 
-        if let Some(b2) = BuiltIn::from_str(cmd2_name.trim().to_lowercase().as_str()) {
-            match redirect_o2 {
-                Some(Redirection::Stdout(mut file)) => { let _ = b2.run_builtin(&args2, &mut file, shell); }
-                _ => { let _ = b2.run_builtin(&args2, &mut io::stdout(), shell); }
-            }
-        } else if let Ok(path2) = which::which(cmd2_name) {
-            if let Ok(mut child2) = Command::new(path2).arg0(cmd2_name).args(&args2).stdin(Stdio::piped()).spawn() {
-                if let Some(mut stdin2) = child2.stdin.take() {
-                    let _ = stdin2.write_all(&intermediate_output);
-                }
-                let _ = child2.wait();
-            }
-        }
-        return true;
+        return true
     }
 
-    if let (Ok(path1), Ok(path2)) = (which::which(cmd1_name), which::which(cmd2_name)) {
-        let mut child1 = match Command::new(path1)
-            .arg0(cmd1_name)
-            .args(&args1)
-            .stdout(Stdio::piped())
-            .spawn()
-        {
-            Ok(child) => child,
-            Err(e) => {
-                eprintln!("Failed to execute first command: {}", e);
+    let mut children: Vec<Child> = Vec::new();
+    let mut previous_stdout: Option<Stdio> = None;
+    
+    for (i, cmd_args) in commands_args.into_iter().enumerate() {
+        let cmd_name = &cmd_args[0];
+        let (args, redirect_o) = extract_redirection(&cmd_args[1..]);
+        let is_last = i == num_commands - 1;
+
+        let path = match which::which(cmd_name) {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("{}: command not found", cmd_name);
+                for mut child in children { let _ = child.kill(); }
                 return true;
             }
         };
 
-        let cmd1_stdout = child1.stdout.take().unwrap();
+        let mut proc = Command::new(path);
+        proc.arg0(cmd_name).args(&args);
 
-        let mut proc2 = Command::new(path2);
-        proc2.arg0(cmd2_name).args(&args2).stdin(Stdio::from(cmd1_stdout));
-
-        match redirect_o2 {
-            Some(Redirection::Stdout(file)) => { proc2.stdout(file); }
-            Some(Redirection::Stderr(file)) => { proc2.stderr(file); }
-            None => {}
+        if let Some(stdout_handle) = previous_stdout.take() {
+            proc.stdin(Stdio::from(stdout_handle));
         }
 
-        let mut child2 = match proc2.spawn() {
-            Ok(child) => child,
+        if !is_last {
+            proc.stdout(Stdio::piped());
+        } else {
+            match redirect_o {
+                Some(Redirection::Stdout(file)) => { proc.stdout(file); }
+                Some(Redirection::Stderr(file)) => { proc.stderr(file); }
+                None => {}
+            }
+        }
+
+        match proc.spawn() {
+            Ok(mut child) => {
+                if !is_last {
+                    if let Some(stdout) = child.stdout.take() {
+                        previous_stdout = Some(Stdio::from(stdout));
+                    }
+                }
+                children.push(child);
+            }
             Err(e) => {
-                eprintln!("Failed to execute second command: {}", e);
-                let _ = child1.kill();
+                eprintln!("Failed to execute command {}: {}", cmd_name, e);
+                for mut child in children { let _ = child.kill(); }
                 return true;
             }
-        };
+        }
+    }
 
-        let _ = child2.wait();
-        
-        let _ = child1.kill(); 
-        let _ = child1.wait();
-    } else {
-        eprintln!("command not found");
+    if let Some(mut last_child) = children.pop() {
+        let _ = last_child.wait();
+    }
+
+    for mut child in children.into_iter().rev() {
+        let _ = child.kill();
+        let _ = child.wait();
     }
 
     true
