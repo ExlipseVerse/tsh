@@ -1,7 +1,7 @@
 use crate::builtin::BuiltIn;
 use std::env;
 use std::process::Command;
-use std::fs::{read_dir, metadata};
+use std::fs::{read_dir};
 use std::io::{self, Write};
 use std::sync::{Arc,Mutex};
 use std::collections::HashMap;
