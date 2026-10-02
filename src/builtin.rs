@@ -127,9 +127,18 @@ impl BuiltIn {
             }
 
             BuiltIn::History => {
-                for (i, cmd_line) in shell.history.iter().enumerate() {
-                    let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                if let Some(limit) = args.get(0).and_then(|s| s.parse::<usize>().ok()) {
+                    let mut hist_l: Vec<_> = shell.history.iter().enumerate().rev().take(limit).collect();
+                    hist_l.reverse();
+                    for (i, cmd_line) in hist_l {
+                        let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                    }
+                } else {
+                    for (i, cmd_line) in shell.history.iter().enumerate() {
+                        let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                    }
                 }
+                
             }
 
             BuiltIn::Exit => return Flow::Exit,
