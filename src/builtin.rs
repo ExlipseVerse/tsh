@@ -17,6 +17,7 @@ pub enum BuiltIn {
     Cd,
     Complete,
     Jobs,
+    History
 }
 
 impl BuiltIn {
@@ -29,6 +30,7 @@ impl BuiltIn {
             "cd" => Some(BuiltIn::Cd),
             "complete" => Some(BuiltIn::Complete),
             "jobs" => Some(BuiltIn::Jobs),
+            "history" => Some(BuiltIn::History),
             _ => None,
         }
     }
@@ -123,6 +125,8 @@ impl BuiltIn {
 
                 for i in done.into_iter().rev() { shell.jobs.remove(i); }
             }
+
+            BuiltIn::History => {}
 
             BuiltIn::Exit => return Flow::Exit,
         }
