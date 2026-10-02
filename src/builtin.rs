@@ -110,12 +110,12 @@ impl BuiltIn {
                 for (i, job) in shell.jobs.iter_mut().enumerate() {
                     let marker = if i + 1 == len { "+" } else if i + 2 == len { "-" } else { " " };
                     match job.child.try_wait() {
-                        Ok(None) => {
-                            let _ = writeln!(out, "[{}]{}  Running\t\t{} &", job.id, marker, job.cmd_string);
-                        }
-                        _ => {
+                        Ok(Some(_status)) => {
                             let _ = writeln!(out, "[{}]{}  Done\t\t{}", job.id, marker, job.cmd_string);
                             done.push(i);
+                        }
+                        _ => {
+                            let _ = writeln!(out, "[{}]{}  Running\t\t{} &", job.id, marker, job.cmd_string);
                         }
                         
                     }
