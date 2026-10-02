@@ -94,21 +94,6 @@ impl Completer for ShellHelper {
 								}
 
 								if !s_candidates.is_empty() {
-									let paths: Vec<String> = s_candidates.iter().map(|c| c.display.clone()).collect();
-									if let Some(prefix_str) = longest_common_prefix(&paths) {
-										if prefix_str.len() > curr_arg.len() {
-											let is_single = s_candidates.len() == 1;
-											let replacement = if is_single {
-												format!("{} ", prefix_str)
-											} else {
-												prefix_str.to_string()
-											};
-											return Ok((start, vec![Pair {
-												display: prefix_str.to_string(),
-												replacement,
-											}]));
-										}
-									}
 									return Ok((start, s_candidates));
 								}
 							}

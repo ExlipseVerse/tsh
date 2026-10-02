@@ -79,14 +79,28 @@ impl BuiltIn {
 
             BuiltIn::Complete => {
                 let mut reg = shell.completions.lock().unwrap();
-                match args {
-                    ["-p", cmd, ..] => match reg.get(*cmd) {
-                        Some(spec) => { let _= writeln!(out, "complete {} {}", spec, cmd); }
-                        None => { let _ = writeln!(out, "complete: {}: no completion specification", cmd); }
-                    },
-                    ["-c", path, cmd, ..] => { reg.insert(cmd.to_string(), format!("-C '{}'", path));},
-                    ["-r", cmd, ..] => { reg.remove(*cmd); },
-                    _=>{}
+                if let Some(flag) = args.first() {
+                    match flag.to_lowercase().as_str() {
+                        "-p" => {
+                            if let Some(cmd) = args.get(2) {
+                                match reg.get(*cmd) {
+                                    Some(spec) => { let _ = writeln!(out, "complete {} {}", spec, cmd); }
+                                    None => { let _ = writeln!(out, "complete: {}: no completion specification", cmd); }
+                                }
+                            }
+                        }
+                        "-c" => {
+                            if let (Some(path), Some(cmd)) = (args.get(2), args.get(3)) {
+                                reg.insert(cmd.to_string(), format!("-C '{}'", path));
+                            }
+                        }
+                        "-r" => {
+                            if let Some(cmd) = args.get(2) {
+                                reg.remove(*cmd);
+                            }
+                        }
+                        _ => {}
+                    }
                 }
             }
 
