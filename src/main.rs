@@ -229,6 +229,10 @@ fn main() {
         // let mut input = String::new();
         // io::stdout().flush().unwrap();
         // io::stdin().read_line(&mut input).unwrap();
+
+        // save input
+        shell.history.push(input.trim().to_string());
+
         if run_pipeline(&input, &mut shell) {
             continue;
         }

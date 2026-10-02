@@ -12,10 +12,11 @@ pub struct Job {
 pub struct Shell {
 	pub jobs: Vec<Job>,
 	pub completions: Arc<Mutex<HashMap<String, String>>>,
+	pub history: Vec<String>,
 }
 
 impl Shell {
 	pub fn new(completions: Arc<Mutex<HashMap<String, String>>>) -> Self {
-		Self { jobs: Vec::new(), completions }
+		Self { jobs: Vec::new(), completions, history: Vec::new() }
 	}
 }

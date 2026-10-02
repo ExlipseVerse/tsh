@@ -126,7 +126,11 @@ impl BuiltIn {
                 for i in done.into_iter().rev() { shell.jobs.remove(i); }
             }
 
-            BuiltIn::History => {}
+            BuiltIn::History => {
+                for (i, cmd_line) in shell.history.iter().enumerate() {
+                    let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                }
+            }
 
             BuiltIn::Exit => return Flow::Exit,
         }
