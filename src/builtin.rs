@@ -82,7 +82,7 @@ impl BuiltIn {
                 if let Some(flag) = args.first() {
                     match flag.to_lowercase().as_str() {
                         "-p" => {
-                            if let Some(cmd) = args.get(2) {
+                            if let Some(cmd) = args.get(1) {
                                 match reg.get(*cmd) {
                                     Some(spec) => { let _ = writeln!(out, "complete {} {}", spec, cmd); }
                                     None => { let _ = writeln!(out, "complete: {}: no completion specification", cmd); }
@@ -90,12 +90,12 @@ impl BuiltIn {
                             }
                         }
                         "-c" => {
-                            if let (Some(path), Some(cmd)) = (args.get(2), args.get(3)) {
+                            if let (Some(path), Some(cmd)) = (args.get(1), args.get(2)) {
                                 reg.insert(cmd.to_string(), format!("-C '{}'", path));
                             }
                         }
                         "-r" => {
-                            if let Some(cmd) = args.get(2) {
+                            if let Some(cmd) = args.get(1) {
                                 reg.remove(*cmd);
                             }
                         }
