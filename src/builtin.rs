@@ -163,10 +163,19 @@ impl BuiltIn {
 
                         "-a" | "-A" => {
                             if let Some(path) = args.get(1) {
-                                let history_content = shell.history.join("\n");
+                                
+                                let existing_lines = fs::read_to_string(path)
+                                    .map(|c| c.lines().filter(|l| !l.trim().is_empty()).count())
+                                    .unwrap_or(0);
+
                                 if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(path) {
-                                    if let Err(_) = writeln!(file, "{}", history_content) {
-                                        let _ = writeln!(out, "Error: Failed to write data to history file '{}'", path);
+                                    if shell.history.len() > existing_lines {
+                                        for cmd in &shell.history[existing_lines..] {
+                                            if let Err(_) = writeln!(file, "{}", cmd) {
+                                                let _= writeln!(out, "Error: Failed to write data to history file '{}'", path);
+                                                break;
+                                            }
+                                        }
                                     }
                                 } else {
                                     let _ = writeln!(out, "Error: Could not open history file '{}'", path);
