@@ -128,6 +128,8 @@ impl BuiltIn {
                 for i in done.into_iter().rev() { shell.jobs.remove(i); }
             }
 
+
+            //TODO: make a saving function to make it flexible
             BuiltIn::History => {
                 if let Some(arg) = args.get(0) {
                     match *arg {

@@ -11,7 +11,10 @@ use shell::{Shell, Job};
 use std::sync::{Arc,Mutex};
 use std::collections::HashMap;
 
+use std::env;
 use std::io;
+use std::fs;
+use std::fs::OpenOptions;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio, Child};
 
@@ -193,6 +196,20 @@ fn main() {
     rl.set_completion_type(CompletionType::List);
     rl.set_helper(Some(helper));
 
+    // load history from HISTFILE on startup
+    if let Ok(hist_file) = env::var("HISTFILE") {
+        if let Ok(content) = fs::read_to_string(&hist_file) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    shell.history.push(line.to_string());
+                }
+            }
+
+            shell.history_index = shell.history.len();
+        }
+    }
+
     loop {
 
         // Background job reap
@@ -305,6 +322,16 @@ fn main() {
             println!("{}: command not found", cmd_name);
         }
     }
+
+    if let Ok(hist_file) = env::var("HISTFILE") {
+        let skip = shell.history_index;
+        if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(&hist_file) {
+            for cmd in shell.history.iter().skip(skip) {
+                let _ = writeln!(file, "{}", cmd);
+            }
+        }
+    }
+
 }
 
 
