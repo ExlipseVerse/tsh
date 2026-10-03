@@ -208,16 +208,30 @@ impl BuiltIn {
             }
 
             BuiltIn::Declare => {
-                if let Some(arg) = args.get(0) {
-                    match *arg {
-                        "-p" => {
-                            if let Some(var) = args.get(1) {
-                                println!("declare: {}: not found", var);
+                match args.get(0).map(|s| s.as_ref()) {
+                    Some("-p") => {
+                        if let Some(var_name) = args.get(1) {
+                            if let Some(value) = &shell.env.get(*var_name) {
+                                println!("declare -- {}=\"{}\"", var_name, value);
+                            } else {
+                                eprintln!("declare: {}: not found", var_name);
+                            }
+                        } else {
+                            for (key, val) in &shell.env {
+                                println!("declare -- {}=\"{}\"", key, val);
                             }
                         }
+                    }
 
-                        _=> {
+                    Some(assignment) if assignment.contains("=") => {
+                        if let Some((name, value)) = assignment.split_once('=') {
+                            &shell.env.insert(name.to_string(), value.to_string());
+                        }
+                    }
 
+                    _ => {
+                        for (key, val) in &shell.env {
+                            println!("declare -- {}=\"{}\"", key, val);
                         }
                     }
                 }

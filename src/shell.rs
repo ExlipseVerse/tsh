@@ -14,10 +14,11 @@ pub struct Shell {
 	pub completions: Arc<Mutex<HashMap<String, String>>>,
 	pub history: Vec<String>,
 	pub history_index: usize,
+	pub env: HashMap<String, String>
 }
 
 impl Shell {
 	pub fn new(completions: Arc<Mutex<HashMap<String, String>>>) -> Self {
-		Self { jobs: Vec::new(), completions, history: Vec::new(), history_index: 0, }
+		Self { jobs: Vec::new(), completions, history: Vec::new(), history_index: 0, env: HashMap::<String, String>::new()}
 	}
 }
