@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 use crate::shell::Shell;
@@ -127,11 +128,36 @@ impl BuiltIn {
             }
 
             BuiltIn::History => {
-                if let Some(limit) = args.get(0).and_then(|s| s.parse::<usize>().ok()) {
-                    let mut hist_l: Vec<_> = shell.history.iter().enumerate().rev().take(limit).collect();
-                    hist_l.reverse();
-                    for (i, cmd_line) in hist_l {
-                        let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                if let Some(arg) = args.get(0) {
+                    match arg.as_ref() {
+                        "-r" => {
+                            if let Some(path) = args.get(1) {
+                                if let Ok(content) = fs::read_to_string(path) {
+                                    for line in content.lines() {
+                                        let trimmed = line.trim();
+                                        if !trimmed.is_empty() {
+                                            shell.history.push(line.to_string());
+                                        };
+                                    }
+                                } else {
+                                    let _ = writeln!(out, "Error: Could not read history file '{}'", path);
+                                }
+                            } else {
+                                let _ = writeln!(out, "Error: Missing file path for history -r");
+                            }
+                        }
+
+                        _=> {
+                            if let Ok(limit) = arg.parse::<usize>() {
+                                let mut hist_l: Vec<_> = shell.history.iter().enumerate().rev().take(limit).collect();
+                                hist_l.reverse();
+                                for (i, cmd_line) in hist_l {
+                                    let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
+                                }
+                            } else {
+                                let _ = writeln!(out, "Error: Invalid history limit '{}'", arg);
+                            }
+                        }
                     }
                 } else {
                     for (i, cmd_line) in shell.history.iter().enumerate() {
