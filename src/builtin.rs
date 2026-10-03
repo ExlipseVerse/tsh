@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::fs::OpenOptions;
 use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 use crate::shell::Shell;
@@ -154,6 +155,21 @@ impl BuiltIn {
 
                                 } else {
                                     let _ = writeln!(out, "Error: Could not write history to file '{}'", path);
+                                }
+                            } else {
+                                let _ = writeln!(out, "Error: Missing file path for history -w");
+                            }
+                        }
+
+                        "-a" | "-A" => {
+                            if let Some(path) = args.get(1) {
+                                let history_content = shell.history.join("\n");
+                                if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(path) {
+                                    if let Err(_) = file.write_all(history_content.as_bytes()) {
+                                        let _ = writeln!(out, "Error: Failed to write data to history file '{}'", path);
+                                    }
+                                } else {
+                                    let _ = writeln!(out, "Error: Could not open history file '{}'", path);
                                 }
                             } else {
                                 let _ = writeln!(out, "Error: Missing file path for history -w");
