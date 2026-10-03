@@ -167,7 +167,7 @@ impl BuiltIn {
                                 let skip = shell.history_index;
 
                                 if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(path) {
-                                    for cmd in &shell.history.iter().skip(skip) {
+                                    for cmd in shell.history.iter().skip(skip) {
                                         if let Err(_) = writeln!(file, "{}", cmd) {
                                             let _= writeln!(out, "Error: Failed to write data to history file '{}'", path);
                                             break;
