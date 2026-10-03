@@ -19,7 +19,8 @@ pub enum BuiltIn {
     Cd,
     Complete,
     Jobs,
-    History
+    History,
+    Declare,
 }
 
 impl BuiltIn {
@@ -33,6 +34,7 @@ impl BuiltIn {
             "complete" => Some(BuiltIn::Complete),
             "jobs" => Some(BuiltIn::Jobs),
             "history" => Some(BuiltIn::History),
+            "declare" => Some(BuiltIn::Declare),
             _ => None,
         }
     }
@@ -202,6 +204,10 @@ impl BuiltIn {
                         let _= writeln!(out, "{:>5}  {}", i+1, cmd_line);
                     }
                 }
+                
+            }
+
+            BuiltIn::Declare => {
                 
             }
 
