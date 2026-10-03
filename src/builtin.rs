@@ -208,7 +208,19 @@ impl BuiltIn {
             }
 
             BuiltIn::Declare => {
-                
+                if let Some(arg) = args.get(0) {
+                    match *arg {
+                        "-p" => {
+                            if let Some(var) = args.get(1) {
+                                println!("declare: {}: not found", var);
+                            }
+                        }
+
+                        _=> {
+
+                        }
+                    }
+                }
             }
 
             BuiltIn::Exit => return Flow::Exit,
