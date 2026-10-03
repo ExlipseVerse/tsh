@@ -130,8 +130,8 @@ impl BuiltIn {
 
             BuiltIn::History => {
                 if let Some(arg) = args.get(0) {
-                    match arg.as_ref() {
-                        "-r" | "-R" => {
+                    match *arg {
+                        "-r" => {
                             if let Some(path) = args.get(1) {
                                 if let Ok(content) = fs::read_to_string(path) {
                                     for line in content.lines() {
@@ -148,7 +148,7 @@ impl BuiltIn {
                             }
                         }
 
-                        "-w" | "-W" => {
+                        "-w" => {
                             if let Some(path) = args.get(1) {
                                 let history_content = shell.history.join("\n");
                                 if let Ok(_) = fs::write(path, format!("{}\n", history_content)) {
@@ -161,22 +161,20 @@ impl BuiltIn {
                             }
                         }
 
-                        "-a" | "-A" => {
+                        "-a" => {
                             if let Some(path) = args.get(1) {
                                 
-                                let existing_lines = fs::read_to_string(path)
-                                    .map(|c| c.lines().filter(|l| !l.trim().is_empty()).count())
-                                    .unwrap_or(0);
+                                let skip = shell.history_index;
 
                                 if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(path) {
-                                    if shell.history.len() > existing_lines {
-                                        for cmd in &shell.history[existing_lines..] {
-                                            if let Err(_) = writeln!(file, "{}", cmd) {
-                                                let _= writeln!(out, "Error: Failed to write data to history file '{}'", path);
-                                                break;
-                                            }
+                                    for cmd in &shell.history.iter().skip(skip) {
+                                        if let Err(_) = writeln!(file, "{}", cmd) {
+                                            let _= writeln!(out, "Error: Failed to write data to history file '{}'", path);
+                                            break;
                                         }
                                     }
+
+                                    shell.history_index = shell.history.len();
                                 } else {
                                     let _ = writeln!(out, "Error: Could not open history file '{}'", path);
                                 }
