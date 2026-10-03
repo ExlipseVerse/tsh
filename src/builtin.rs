@@ -130,7 +130,7 @@ impl BuiltIn {
             BuiltIn::History => {
                 if let Some(arg) = args.get(0) {
                     match arg.as_ref() {
-                        "-r" => {
+                        "-r" | "-R" => {
                             if let Some(path) = args.get(1) {
                                 if let Ok(content) = fs::read_to_string(path) {
                                     for line in content.lines() {
@@ -144,6 +144,19 @@ impl BuiltIn {
                                 }
                             } else {
                                 let _ = writeln!(out, "Error: Missing file path for history -r");
+                            }
+                        }
+
+                        "-w" | "-W" => {
+                            if let Some(path) = args.get(1) {
+                                let history_content = shell.history.join("\n");
+                                if let Ok(_) = fs::write(path, format!("{}\n", history_content)) {
+
+                                } else {
+                                    let _ = writeln!(out, "Error: Could not write history to file '{}'", path);
+                                }
+                            } else {
+                                let _ = writeln!(out, "Error: Missing file path for history -w");
                             }
                         }
 
