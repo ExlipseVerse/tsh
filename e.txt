@@ -1,0 +1,4 @@
+c;ear
+cre
+clear
+history -a e.txt

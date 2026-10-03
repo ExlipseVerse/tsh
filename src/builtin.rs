@@ -165,7 +165,7 @@ impl BuiltIn {
                             if let Some(path) = args.get(1) {
                                 let history_content = shell.history.join("\n");
                                 if let Ok(mut file) = OpenOptions::new().append(true).create(true).open(path) {
-                                    if let Err(_) = file.write_all(history_content.as_bytes()) {
+                                    if let Err(_) = writeln!(file, "{}", history_content) {
                                         let _ = writeln!(out, "Error: Failed to write data to history file '{}'", path);
                                     }
                                 } else {
