@@ -42,17 +42,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codecrafters-shell"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "rustyline",
- "thiserror",
- "which",
-]
-
-[[package]]
 name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -237,6 +226,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tsh"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "rustyline",
+ "thiserror",
+ "which",
 ]
 
 [[package]]

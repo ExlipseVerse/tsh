@@ -1,35 +1,54 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/e1ba7798-5b8a-4e92-93c9-5fbb4c7f5745)](https://app.codecrafters.io/users/ExlipseVerse?r=2qF)
+<!-- [![progress-banner](https://backend.codecrafters.io/progress/shell/e1ba7798-5b8a-4e92-93c9-5fbb4c7f5745)](https://app.codecrafters.io/users/ExlipseVerse?r=2qF) -->
 
-This is a starting point for Rust solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+# $ tsh
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+A minimal POSIX-compliant command interpreter written from scratch in Rust.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+Built as part of the CodeCrafters "Build Your Own Shell" challenge to explore low-level systems programming, tokenization, process spawning, and I/O streams.
 
-# Passing the first stage
+## Features
 
-The entry point for your `shell` implementation is in `src/main.rs`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+- **Builtins:** `echo`, `exit`, `pwd`, `cd` (including `~` expansion), and `type`.
+- **Executable Spawning:** Searches `PATH` to launch external binaries natively.
+- **Redirection:** Supports standard output (`>` or `1>`) and standard error (`2>`) redirection to files.
+- **Append Mode:** Supports standard output appending (`>>` or `1>>`).
+- **Background Jobs:** Append `&` to run processes asynchronously in the background.
+- **Tab Completion:** Interactive tab-completion for builtins, `PATH` binaries, and file/directory paths via `rustyline`.
 
-```sh
-codecrafters submit
+## Quick Start
+
+### Prerequisites
+
+Ensure you have the Rust toolchain installed:
+```bash
+rustc --version
 ```
 
-Time to move on to the next stage!
+### Installation & Running
 
-# Stage 2 & beyond
+Clone the repository and run the binary using Cargo:
 
-Note: This section is for stages 2 and beyond.
+```bash
+git clone https://github.com
+cd tsh
+cargo run --release
+```
 
-1. Ensure you have `cargo (1.96)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.rs`. This command compiles your Rust project, so it might be slow
-   the first time you run it. Subsequent runs will be fast.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+## Vibe Check
+
+```text
+\$ pwd
+/home/hacker/tsh
+\$ echo "hello world" > out.txt
+\$ cat out.txt
+hello world
+\$ nonexistent-command 2> error.log
+\$ cat error.log
+nonexistent-command: command not found
+\(sleep 10 & [1] 42069\) jobs
+[1]+ Running      sleep 10 &
+```
+
+## License
+
+MIT / Educational Open Source.
