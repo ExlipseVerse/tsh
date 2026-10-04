@@ -214,7 +214,7 @@ impl BuiltIn {
                             if let Some(value) = &shell.env.get(*var_name) {
                                 println!("declare -- {}=\"{}\"", var_name, value);
                             } else {
-                                eprintln!("declare: {}: not found", var_name);
+                                eprintln!("declare: `{}`: not a valid identifier", var_name);
                             }
                         } else {
                             for (key, val) in &shell.env {
@@ -225,7 +225,9 @@ impl BuiltIn {
 
                     Some(assignment) if assignment.contains("=") => {
                         if let Some((name, value)) = assignment.split_once('=') {
-                            &shell.env.insert(name.to_string(), value.to_string());
+                            if name.chars().next().map_or(false, |c| c.is_ascii_digit()) == false {
+                                &shell.env.insert(name.to_string(), value.to_string());
+                            } 
                         }
                     }
 
