@@ -227,7 +227,9 @@ impl BuiltIn {
                         if let Some((name, value)) = assignment.split_once('=') {
                             if name.chars().next().map_or(false, |c| c.is_ascii_digit()) == false {
                                 &shell.env.insert(name.to_string(), value.to_string());
-                            } 
+                            } else {
+                                eprintln!("declare: `{}`: not a valid identifier", name.to_string());
+                            }
                         }
                     }
 
