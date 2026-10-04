@@ -214,7 +214,7 @@ impl BuiltIn {
                             if let Some(value) = &shell.env.get(*var_name) {
                                 println!("declare -- {}=\"{}\"", var_name, value);
                             } else {
-                                eprintln!("declare: `{}`: not a valid identifier", var_name);
+                                eprintln!("declare: {}: not found", var_name);
                             }
                         } else {
                             for (key, val) in &shell.env {
