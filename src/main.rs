@@ -255,6 +255,14 @@ fn main() {
         }
 
         let mut command: Vec<String> = parse_input(&input);
+        command = command.into_iter().map(|word| {
+            if word.starts_with("$") && word.len() > 1 {
+                let var_name = &word[1..];
+                shell.env.get(var_name).cloned().unwrap_or_default()
+            } else {
+                word
+            }
+        }).filter(|word| !word.is_empty()).collect();
 
         let Some(cmd_name) = command.first().cloned() else {continue}; 
 
