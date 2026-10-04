@@ -1,3 +1,5 @@
+use crate::shell::Shell;
+
 pub fn parse_input(input: &str) -> Vec<String> {
     let mut args = Vec::new(); // we create an array []
     let mut current_arg = String::new(); // we create a string to store the current argument
@@ -85,4 +87,31 @@ pub fn parse_input(input: &str) -> Vec<String> {
     }
 
     args
+}
+
+pub fn expands_params(word: &str, shell: &Shell) -> String {
+    let mut res = String::new();
+    let chars: Vec<char> = word.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] == '$' && i + 1 < chars.len() && (chars[i+1].is_ascii_alphanumeric() || chars[i+1] == '_') {
+            i += 1;
+            let start = i;
+
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                i += 1;
+            }
+
+            let var_name: String = chars[start..i].iter().collect();
+            if let Some(val) = shell.env.get(&var_name) {
+                res.push_str(val);
+            }
+        } else {
+            res.push(chars[i]);
+            i += 1;
+        }
+    }
+
+    res
 }
