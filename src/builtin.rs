@@ -225,7 +225,11 @@ impl BuiltIn {
 
                     Some(assignment) if assignment.contains("=") => {
                         if let Some((name, value)) = assignment.split_once('=') {
-                            if name.chars().next().map_or(false, |c| c.is_ascii_digit()) == false {
+                            let is_valid = !name.is_empty() 
+                                && !name.chars().next().unwrap().is_ascii_digit() 
+                                && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+
+                            if is_valid {
                                 &shell.env.insert(name.to_string(), value.to_string());
                             } else {
                                 eprintln!("declare: `{}={}': not a valid identifier", name.to_string(), value.to_string());
