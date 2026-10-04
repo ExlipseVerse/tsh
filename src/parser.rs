@@ -95,7 +95,23 @@ pub fn expands_params(word: &str, shell: &Shell) -> String {
     let mut i = 0;
 
     while i < chars.len() {
-        if chars[i] == '$' && i + 1 < chars.len() && (chars[i+1].is_ascii_alphanumeric() || chars[i+1] == '_') {
+        if chars[i] == '$' && i + 1 < chars.len() && chars[i+1] == '{' {
+            i += 2;
+            let start = i;
+
+            while i < chars.len() && chars[i] != '}' {
+                i += 1;
+            }
+
+            let var_name: String = chars[start..i].iter().collect();
+            if let Some(val) = shell.env.get(&var_name) {
+                res.push_str(val);
+            }
+
+            if i < chars.len() {
+                i += 1;
+            }
+        } else if chars[i] == '$' && i + 1 < chars.len() && (chars[i+1].is_ascii_alphanumeric() || chars[i+1] == '_') {
             i += 1;
             let start = i;
 
